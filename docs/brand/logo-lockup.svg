@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="428" height="132" viewBox="0 0 428 132" role="img" aria-label="PostureRMM">
+  <!-- PostureRMM primary lockup. Three-pillar posture mark (Prevention azure,
+       Patching spring-green, Performance magenta) + Inter wordmark (the RMM in the
+       azure interaction accent) on a self-contained dark tile so it renders
+       identically in light and dark README themes.
+       Colors are the sRGB equivalents of the pillar + neutral OKLCH tokens in
+       assets/tailwind.css (see DESIGN.md §2 Pillar Identity).
+
+       Canvas width is MEASURED, not chosen: the wordmark's rendered bbox is
+       253.9px wide at these settings in both Inter and Arial-metric fallbacks
+       (Liberation Sans, headless Chrome, 2026-08-15), ending at x=388. 428 puts
+       40px of padding either side of the 40..388 content, matching the bar
+       inset. The canvas was 520 and left 132px dead on the right. Re-measure
+       before changing font-size, letter-spacing or the wordmark. -->
+  <rect x="0.5" y="0.5" width="427" height="131" rx="18" fill="#0A0C12" stroke="#22232B"/>
+  <rect x="40" y="34" width="16" height="64" rx="3" fill="#00B2F6"/>
+  <rect x="66" y="34" width="16" height="64" rx="3" fill="#26E4B0"/>
+  <rect x="92" y="34" width="16" height="64" rx="3" fill="#F520AA"/>
+  <text x="134" y="82" font-family="'Inter','Helvetica Neue',Arial,sans-serif" font-size="44" letter-spacing="-1.5">
+    <tspan font-weight="700" fill="#E7E7EC">Posture</tspan><tspan font-weight="500" fill="#00B2F6">RMM</tspan>
+  </text>
+</svg>

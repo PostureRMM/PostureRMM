@@ -1,0 +1,33 @@
+name: Feature request
+description: Something PostureRMM should be able to do.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do
+      description: |
+        Describe the situation, not the solution. What are you managing, and what
+        does PostureRMM make hard or impossible today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like it to do
+    validations:
+      required: true
+
+  - type: textarea
+    id: today
+    attributes:
+      label: How do you handle it today
+      description: A script, another tool, doing it by hand, or not at all.
+
+  - type: input
+    id: fleet
+    attributes:
+      label: Roughly how many endpoints do you manage
+      placeholder: "40"

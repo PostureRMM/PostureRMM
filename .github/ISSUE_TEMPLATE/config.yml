@@ -1,0 +1,10 @@
+# Blank issues are off so every report arrives on a form, which prefixes the
+# title and applies a label. Questions go to Discussions, not Issues.
+blank_issues_enabled: false
+contact_links:
+  - name: Question or how-to
+    url: https://github.com/PostureRMM/PostureRMM/discussions
+    about: Ask in Discussions — installation help, configuration, "how do I …".
+  - name: Security vulnerability
+    url: https://github.com/PostureRMM/PostureRMM/blob/main/SECURITY.md
+    about: Email security@posturermm.com. Never open a public issue for a vulnerability.

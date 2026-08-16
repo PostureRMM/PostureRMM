@@ -1,0 +1,67 @@
+name: Bug report
+description: Something in PostureRMM is broken.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do not report security vulnerabilities here — see
+        [SECURITY.md](https://github.com/PostureRMM/PostureRMM/blob/main/SECURITY.md).
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happens
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to …
+        2. Click …
+        3. See …
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: PostureRMM version
+      description: Shown at Settings → About, or `docker compose images`.
+      placeholder: "1.2.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where does it happen
+      options:
+        - Admin UI
+        - Backend / API
+        - Windows agent
+        - Bastion / feed sync
+        - Install or upgrade
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: endpoint-os
+    attributes:
+      label: Endpoint OS (if relevant)
+      placeholder: "Windows 11 24H2 / Windows Server 2022"
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        `docker compose logs backend` for server issues. Redact anything sensitive —
+        hostnames, IP addresses, licence tokens.
+      render: text

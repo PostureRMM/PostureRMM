@@ -1,0 +1,328 @@
+PostureRMM End-User License Agreement
+Last updated: 2026-08-14
+
+Copyright (c) 2026 PostureRMM. All rights reserved.
+
+PostureRMM is proprietary software. It is licensed, not sold. This agreement is
+the whole of the permission you have to use it, and it is short on purpose: we
+would rather you read it than skim it.
+
+
+THE SHORT VERSION
+
+  - Run PostureRMM free, forever, on up to 50 endpoints. Every feature.
+  - Need more endpoints? Buy an entitlement. It raises the cap. Nothing else
+    about the product changes.
+  - Manage your own machines, or your customers' machines. Both are fine.
+  - Don't redistribute our builds, rebrand them, or defeat the endpoint cap.
+  - We give no warranty and we cap our liability. Sections 13 and 14 are the
+    two that could cost you. Read those in full.
+
+The short version is a summary, not the agreement. Sections 1 to 17 are.
+
+
+1. ACCEPTING THIS AGREEMENT
+
+You accept this agreement by downloading, installing, running, or continuing to
+use the Software. If you are doing that for an organisation, you are confirming
+you have authority to bind it. If you do not accept it, do not install the
+Software, and uninstall it if you already have.
+
+
+2. DEFINITIONS
+
+Software — PostureRMM: the backend, the Bastion, the optional Proxy, the Windows
+agent together with its helper and tray components, the installers and container
+images we publish, the compliance and posture content bundled with them, and the
+documentation shipped alongside. We publish the Software as binaries and
+container images only. We do not publish its source code, and nothing in this
+agreement grants you any right to source code.
+
+We, us, our — PostureRMM, the publisher of the Software.
+
+You, your — the person or organisation running the Software.
+
+Endpoint — one device, physical or virtual, on which the PostureRMM agent is
+installed and enrolled against your installation.
+
+Entitlement — a signed license token we issue to a specific installation,
+recording the endpoint cap it is licensed for and the date it is paid through.
+
+Community — the Software running without an Entitlement.
+
+Business — the Software running with a valid Entitlement.
+
+Official Build — a copy of the Software that we published ourselves: a GitHub
+Release asset in the official PostureRMM repository, or a container image in a
+GitHub Container Registry namespace we control. The README in that repository
+lists the current locations.
+
+
+3. THE LICENSE WE GRANT YOU
+
+Subject to this agreement, we grant you a worldwide, non-exclusive,
+non-transferable, royalty-free license to:
+
+  (a) install and run Official Builds of the Software on infrastructure you
+      control, in production, across as many separate installations as you
+      operate;
+
+  (b) use it to manage endpoints you own, endpoints your organisation operates,
+      and endpoints you manage on behalf of your customers. Running PostureRMM
+      as a managed service provider is expressly permitted; every endpoint you
+      manage counts toward your cap the same as any other;
+
+  (c) make as many copies as you need for backup, staging, testing, and disaster
+      recovery, provided those copies stay under this agreement;
+
+  (d) keep running any version you lawfully obtained, for as long as you want to
+      run it. We can stop publishing a version; we cannot take back the copy you
+      already have.
+
+The right to run the Software is perpetual. An Entitlement does not grant that
+right — it raises the endpoint cap for the period it covers (section 5).
+
+
+4. COMMUNITY: FREE, UP TO 50 ENDPOINTS
+
+Community costs nothing and does not expire. It is the same product as Business,
+with the same features: no feature matrix, no surcharge for single sign-on, no
+asterisks. The one limit is a cap of 50 endpoints.
+
+Endpoints beyond the cap still enrol, but they sit in a pending state — not
+scanned, not scored, not billed — until you have cap for them. The cap is
+enforced by the Software in real time. We do not audit you, and there is no
+retrospective true-up.
+
+
+5. BUSINESS: AN ENTITLEMENT RAISES THE CAP
+
+An Entitlement raises your cap to 50 plus the number of seats you purchased. The
+first 50 endpoints stay free at any scale. Prices, billing cadence, and payment
+terms are the ones stated to you at purchase; they are deliberately not restated
+here, so that this file cannot go stale about them.
+
+Two things about how Entitlements behave, because they are promises and not
+merely mechanics:
+
+  (a) An Entitlement is valid on your installation until its paid-through date
+      plus a seven-day grace period, whether or not that installation can reach
+      the internet. Our downtime cannot degrade a paying customer, and a site
+      that opens outbound access for one maintenance window a month is a
+      first-class customer.
+
+  (b) If an Entitlement lapses, the installation degrades gracefully to
+      Community: endpoints beyond 50 move to the pending state, and the first 50
+      keep full monitoring. We do not brick installations over a billing event.
+
+
+6. WHAT YOU MAY NOT DO
+
+You may not:
+
+  (a) redistribute, publish, mirror, sell, rent, lease, sublicense, or lend
+      copies of the Software — binaries, installers, or container images — to
+      anyone else. Point them at the Official Builds instead;
+
+  (b) rebrand the Software, or distribute it in whole or in part under another
+      name, as your own product, or bundled into another product;
+
+  (c) circumvent, disable, alter, or interfere with the endpoint cap, the
+      Entitlement verification, the tier reporting, or any other licensing
+      mechanism in the Software; or use an Entitlement that was not issued to
+      your installation;
+
+  (d) remove, obscure, or alter our copyright, license, version, or attribution
+      notices — in the binaries, in the container images, or in the product's
+      own interface;
+
+  (e) reverse engineer, decompile, or disassemble the Software, or otherwise try
+      to derive its source code, except:
+
+        (i)  to the extent applicable law gives you a right to do so that we
+             cannot exclude by contract; and
+
+        (ii) for good-faith security research conducted under our vulnerability
+             disclosure policy. We would far rather you found a flaw in our
+             software than didn't. Report it to security@posturermm.com and we
+             will not treat that research as a breach of this section.
+
+
+7. OFFICIAL BUILDS
+
+This license covers Official Builds only. A copy of PostureRMM obtained anywhere
+else — a mirror, a third-party container image, a repackaged installer, a
+"patched" build — is not ours. We have not built it, we have not tested it, we
+cannot say what is in it, and running it falls outside this agreement.
+
+Take that seriously rather than as legal throat-clearing: a PostureRMM agent
+holds administrative control of every machine it is installed on, which makes a
+tampered build one of the most valuable things an attacker could hand you.
+Official binaries come only from our GitHub Releases. Beware imitations.
+
+
+8. TRADEMARKS
+
+"PostureRMM", the PostureRMM logo and lockup, and the product's visual identity
+are ours. A license to run the Software is not a license to our marks, and
+nothing in this agreement grants you one.
+
+You do not need our permission to say, accurately, that you use, run, evaluate,
+or provide services on PostureRMM. That is ordinary descriptive use and it is
+fine. What is not fine is using our name or marks in a way that suggests we
+built, endorsed, or support something we did not, or applying them to a modified
+or third-party build.
+
+
+9. THIRD-PARTY COMPONENTS
+
+The Software includes third-party components — open-source libraries, fonts, and
+icon sets — that remain under their own licenses. Nothing in this agreement
+narrows the rights those licenses give you, and where one of them conflicts with
+this agreement in respect of that component, that license governs.
+
+
+10. COMPLIANCE CONTENT IS INFORMATION, NOT CERTIFICATION
+
+PostureRMM measures your endpoints against published benchmarks and public
+vulnerability data, and reports what it finds. That is a measurement. It is not
+an audit, not a certification, and not legal advice.
+
+A green score is not a statement that you comply with HIPAA, PCI DSS, SOC 2,
+ISO 27001, CMMC, Cyber Essentials, or any other framework, and no report the
+Software produces substitutes for your own assessment or for an assessor's.
+Upstream benchmark and vulnerability data can be incomplete, delayed, or wrong;
+we pass on what we are given.
+
+
+11. YOUR RESPONSIBILITIES
+
+The Software takes administrative control of the endpoints you enrol. It can run
+scripts, install and remove software, change security settings, and open a
+remote session. That is what an RMM is.
+
+You are responsible for deploying it only on machines you own or are authorised
+to manage; for who you grant access to; for the credentials, install keys, and
+API tokens you issue; and for keeping your installation patched and reachable
+only by people who should reach it. Deploying PostureRMM onto machines you have
+no authority over is your act, not ours, and it is a breach of this agreement.
+
+
+12. WHAT THE SOFTWARE SENDS OUTWARD
+
+The PostureRMM backend makes no outbound internet connections. The Bastion — the
+only component that talks to the internet at all — pulls vulnerability,
+catalogue, and license data from us on a schedule you control.
+
+Riding that pull is a single usage record: installation ID, product version,
+tier, and endpoint count. That is the whole of it. Your fleet data, your
+inventory, your scan results, your compliance findings, and your endpoints'
+identities stay on your own infrastructure. We do not collect them, and the
+architecture gives us no route to.
+
+
+13. NO WARRANTY
+
+As far as the law allows, the Software is provided as it is, with no warranty or
+condition of any kind, express or implied — including any implied warranty of
+merchantability, satisfactory quality, fitness for a particular purpose,
+accuracy, title, or non-infringement.
+
+We do not warrant that the Software will be uninterrupted, error-free, or
+secure; that it will detect every vulnerability, misconfiguration, or fault on
+your endpoints; or that anything it reports is correct or complete. You decide
+whether to run it, and you are responsible for judging whether it is fit for
+what you need it to do.
+
+
+14. LIMITS ON LIABILITY
+
+As far as the law allows:
+
+  (a) we are not liable to you for any indirect, incidental, special,
+      consequential, or punitive damages, nor for lost profits, lost revenue,
+      lost or corrupted data, business interruption, or the cost of substitute
+      software or services, arising out of or relating to the Software or this
+      agreement, under any legal theory, even if we were told such damages were
+      possible; and
+
+  (b) our total liability to you for everything arising out of or relating to
+      the Software or this agreement is capped at the greater of (i) the amounts
+      you paid us for Entitlements in the twelve months before the claim arose,
+      and (ii) one hundred United States dollars. If you run Community you have
+      paid us nothing, and the cap is one hundred United States dollars.
+
+This is a deliberate allocation of risk, and it is part of why the Software
+costs what it costs: a free tier and a one-dollar-per-endpoint price cannot
+carry unbounded liability.
+
+Nothing in this agreement excludes or limits any liability that cannot lawfully
+be excluded or limited — including liability for death or personal injury caused
+by negligence, and liability for fraud or fraudulent misrepresentation. Some
+jurisdictions do not allow some of the exclusions above; where that is so, they
+apply to you only as far as that jurisdiction allows.
+
+
+15. TERM, TERMINATION, AND WHAT SURVIVES
+
+This agreement starts when you accept it and runs until it ends.
+
+You may end it at any time, by uninstalling the Software.
+
+We may end it if you materially breach section 6 (What you may not do) or
+section 11 (Your responsibilities) and do not fix the breach within 30 days of
+us telling you about it in writing. Where a breach cannot sensibly be
+fixed — you have published our builds under another name, say — it ends when we
+tell you.
+
+When it ends, stop using the Software and delete every copy you hold, including
+container images. Termination for breach does not entitle you to a refund of any
+Entitlement.
+
+We have no remote kill switch, and this agreement does not give us one. Nothing
+here lets us reach into your installation and disable it; our only lever is
+declining to issue or renew an Entitlement. Termination is a legal event, not a
+technical one.
+
+Sections 2, 8, 9, 10, 13, 14, 16, and 17 survive termination, together with any
+payment obligation that had already accrued.
+
+
+16. GENERAL
+
+Which version applies. The version of this agreement that shipped with your copy
+of the Software governs that copy. We may change the terms for later releases;
+doing so never changes the terms of a release you already have.
+
+Severability. If a court finds part of this agreement unenforceable, the rest
+stays in force, and the unenforceable part is narrowed to what is enforceable.
+
+No waiver. If we do not enforce something immediately, we have not given it up.
+
+Entire agreement. This is the whole agreement about the Software between you and
+us, and it replaces anything said before. Where a written order form or purchase
+agreement signed by both of us conflicts with it, that document governs.
+
+Assignment. You may not transfer this agreement or an Entitlement without our
+written consent, except to a successor of your entire business. We may assign
+this agreement.
+
+
+17. GOVERNING LAW
+
+This agreement is governed by the laws of the Isle of Man, without regard to its
+conflict-of-law rules, and the courts of the Isle of Man have exclusive
+jurisdiction over any dispute arising out of or relating to it. The United
+Nations Convention on Contracts for the International Sale of Goods does not
+apply.
+
+Nothing in this section takes away a right you have under the mandatory consumer
+law of the country you live in, where that law says it cannot be excluded by
+agreement.
+
+
+CONTACT
+
+Questions about this license: support@posturermm.com
+Security issues: security@posturermm.com — see our vulnerability disclosure
+policy, published with the documentation.
