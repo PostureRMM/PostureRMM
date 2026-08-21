@@ -126,7 +126,8 @@ chmod +x preflight.sh && ./preflight.sh
 ```
 
 `preflight.sh` checks the host, generates your database password, records this host's address as
-the name agents will use to reach it, pulls the images and starts the stack. Then watch `docker compose logs -f backend` for the generated `admin@localhost` password and
+the name agents will use to reach it, pulls the images and starts the stack. Then watch
+`docker compose logs -f backend` for the generated `admin@localhost` password and
 log in at `https://<host>/`. Add your first endpoint from **Devices → Install Agent**, which hands
 you a one-line PowerShell command to run on it.
 
