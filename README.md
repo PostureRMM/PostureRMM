@@ -128,8 +128,8 @@ chmod +x preflight.sh && ./preflight.sh
 `preflight.sh` checks the host, generates your database password, records this host's address as
 the name agents will use to reach it, pulls the images and starts the stack. Then watch
 `docker compose logs -f backend` for the generated `admin@localhost` password and
-log in at `https://<host>/`. Add your first endpoint from **Devices → Install Agent**, which hands
-you a one-line PowerShell command to run on it.
+log in at `https://<host>/`. Add your first endpoint from **Endpoints → Install first endpoint**,
+which hands you a one-line PowerShell command to run on it.
 
 Windows endpoints supported: **11, 10, and Server 2016 / 2019 / 2022 / 2025.**
 
@@ -160,7 +160,7 @@ split deployment — not before installing.
 
 To set anything, put it in a file called `.env` beside `docker-compose.yml`. If `preflight.sh` has
 already run it wrote one for you — **add your lines to that file** rather than replacing it, so the
-generated database password survives. `.env.example` on the release page is a commented starting
+generated database password survives. `env.example` on the release page is a commented starting
 point. Values are read when a container starts, so run `docker compose up -d` after an edit.
 
 ### Settings most installs touch
