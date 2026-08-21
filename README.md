@@ -214,7 +214,7 @@ one.
 | `POSTURERMM_BASTION__URL` | `http://bastion:8300` | URL the server uses to reach the Bastion — by default the bastion container in the same compose file, so a single-host install sets nothing. Set it only when the Bastion runs on a separate host, e.g. `https://bastion.dmz.example:8443`. |
 | `POSTURERMM_BASTION__SECRET` | generated once and passed between the two containers through a shared volume | Shared secret the server and the Bastion authenticate with. Any string, as long as both sides carry the same one; `openssl rand -hex 32` makes a good one. |
 | `POSTURERMM_FEED__API_URL` | `https://feed.posturermm.com` | Where the Bastion fetches content from. Set it only to point at a mirror of your own. |
-| `POSTURERMM_FEED__DEPLOYMENT_ID` | empty | Identifier for this deployment, sent with each feed request. Any valid UUID. Empty is accepted by the Community feed. |
+| `POSTURERMM_FEED__DEPLOYMENT_ID` | empty | Fallback identifier for this deployment, sent with each feed request. Leave it unset: the server mints one on first boot and sends it, and the Bastion only falls back to this. Set it (any valid UUID) only to pin a Bastion on a separate host. |
 | `POSTURERMM_FEED__TIER` | `community` | Feed channel: `community` or `pro`. |
 | `POSTURERMM_FEED__SYNC_INTERVAL_HOURS` | `1` | How often the Bastion checks for new content, in hours. |
 
