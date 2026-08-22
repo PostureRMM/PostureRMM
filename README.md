@@ -115,8 +115,9 @@ There is no cloud version to migrate you to.
 
 ## Quick Start
 
-Docker Engine 20.10+ and Compose v2 on any Linux host. **Nothing to edit** — no values to choose,
-no certificates to obtain, no DNS.
+Docker Engine 20.10+, Compose v2 and `curl` on any Linux host. **Nothing to edit** — no values
+to choose, no certificates to obtain, no DNS. (Debian and Ubuntu minimal images ship without
+`curl`: `sudo apt install curl` first.)
 
 ```bash
 mkdir posturermm && cd posturermm
