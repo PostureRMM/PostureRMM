@@ -143,10 +143,13 @@ works, then:
 tar xzf posturermm-offline-vX.Y.Z.tar.gz
 cd posturermm-offline-vX.Y.Z
 ./install.sh
+./preflight.sh
 ```
 
-Same stack, with `docker load` in front of the pull. The agent installer travels inside the bundle,
-so first enrollment works with no internet at any point.
+Same stack, with `docker load` in front of the pull. `install.sh` loads the bundled images and puts
+the agent installer in place; `preflight.sh` is the same script the online quickstart runs, and it
+is what checks the host, generates the database password and starts the stack. The agent installer
+travels inside the bundle, so first enrollment works with no internet at any point.
 
 </details>
 
