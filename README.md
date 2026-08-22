@@ -115,10 +115,6 @@ There is no cloud version to migrate you to.
 
 ## Quick Start
 
-Docker Engine 20.10+, Compose v2 and `curl` on any Linux host. **Nothing to edit** — no values
-to choose, no certificates to obtain, no DNS. (Debian and Ubuntu minimal images ship without
-`curl`: `sudo apt install curl` first.)
-
 ```bash
 mkdir posturermm && cd posturermm
 curl -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/docker-compose.yml
@@ -126,33 +122,8 @@ curl -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/prefl
 chmod +x preflight.sh && ./preflight.sh
 ```
 
-`preflight.sh` checks the host, generates your database password, records this host's address as
-the name agents will use to reach it, pulls the images and starts the stack. Then watch
-`docker compose logs -f backend` for the generated `admin@localhost` password and
-log in at `https://<host>/`. Add your first endpoint from **Endpoints → Install first endpoint**,
-which hands you a one-line PowerShell command to run on it.
-
-Windows endpoints supported: **11, 10, and Server 2016 / 2019 / 2022 / 2025.**
-
-<details>
-<summary><b>Air-gapped install</b></summary>
-
-Take `posturermm-offline-vX.Y.Z.tar.gz` from the same release, carry it across however your air gap
-works, then:
-
-```bash
-tar xzf posturermm-offline-vX.Y.Z.tar.gz
-cd posturermm-offline-vX.Y.Z
-./install.sh
-./preflight.sh
-```
-
-Same stack, with `docker load` in front of the pull. `install.sh` loads the bundled images and puts
-the agent installer in place; `preflight.sh` is the same script the online quickstart runs, and it
-is what checks the host, generates the database password and starts the stack. The agent installer
-travels inside the bundle, so first enrollment works with no internet at any point.
-
-</details>
+Nothing to edit — no values to choose, no certificates, no DNS. Requirements, first login and the
+air-gapped install: **[docs/quickstart.md](docs/quickstart.md)**.
 
 ## Configuration
 
@@ -163,16 +134,6 @@ certificate and bastion secret on first start.
 Reach for **[docs/configuration.md](docs/configuration.md)** when you want a real hostname, a
 different port, your own certificate, a split deployment, the content feed, or log and audit
 tuning — not before installing.
-
-## Pricing
-
-**Free, forever, up to 50 endpoints — with every feature above.** Not a trial, not a
-feature-limited edition, not "free for personal use". SSO, the full posture model, all compliance
-content, remote access and every report are in it.
-
-A paid tier for larger fleets arrives in **2027**, once the free one has had real time in the
-field. It will raise the endpoint cap and change nothing else — your first 50 stay free at any
-scale, and there will be no feature matrix, because there are no features to withhold.
 
 ## Support and downloads
 
@@ -190,3 +151,6 @@ separate download site.
 
 Proprietary — see [LICENSE](LICENSE). Free and perpetual up to 50 endpoints, no redistribution or
 rebranding of our builds. It is short and written to be read.
+
+Free means free: not a trial, not a feature-limited edition, not "free for personal use". SSO,
+the full posture model, all compliance content, remote access and every report are in it.
