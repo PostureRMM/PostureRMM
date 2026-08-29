@@ -5,7 +5,7 @@
 **Endpoint management, security and compliance in one self-hosted platform.**
 
 Manage, patch, deploy, remote into, harden, audit and remediate your Windows fleet —
-from one console, on your own hardware, with nothing phoning home.
+from one console, on your own hardware, with your fleet data never leaving it.
 
 **Free forever up to 50 endpoints. Every feature. No asterisks.**
 
@@ -77,9 +77,13 @@ maintenance window, let it fill up, close it again. Anything the backend asks fo
 is shut queues durably and drains the moment it opens, with no operator action and nothing to
 re-request.
 
-Nothing goes the other way. There is no PostureRMM server that knows your fleet exists — the feed
-is a file store and your Bastion downloads files. Community needs no activation and no licence
-token at all; Business activates once and then never needs to reach us again.
+Almost nothing goes the other way. Your install has an opaque identifier, and it is sent with every
+feed request; each license check adds your version, tier and active endpoint count, which is what
+metering a free tier costs. Nothing about your endpoints or their contents ever leaves your server —
+we never learn which machines you run, what is on them, or what failed a check. There is no inbound
+path to your backend and no way for us to reach it. Community needs no activation and no licence
+token at all; Business activates once and then never needs to reach us again. The identifier is
+shown in the product, on the License & activation card, with this same sentence beside it.
 
 First install and first enrollment work with the door shut too: the agent installer travels inside
 the offline bundle.
