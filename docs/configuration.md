@@ -63,14 +63,24 @@ one.
 | `POSTURERMM_BASTION__URL` | `http://bastion:8300` | URL the server uses to reach the Bastion — by default the bastion container in the same compose file, so a single-host install sets nothing. Set it only when the Bastion runs on a separate host, e.g. `https://bastion.dmz.example:8443`. |
 | `POSTURERMM_BASTION__SECRET` | generated once and passed between the two containers through a shared volume | Shared secret the server and the Bastion authenticate with. Any string, as long as both sides carry the same one; `openssl rand -hex 32` makes a good one. |
 | `POSTURERMM_FEED__API_URL` | `https://feed.posturermm.com` | Where the Bastion fetches content from. Set it only to point at a mirror of your own. |
-| `POSTURERMM_FEED__DEPLOYMENT_ID` | empty | Fallback identifier for this deployment, sent with each feed request. Leave it unset: the server mints one on first boot and sends it, and the Bastion only falls back to this. Set it (any valid UUID) only to pin a Bastion on a separate host. |
+| `POSTURERMM_FEED__DEPLOYMENT_ID` | empty | Identifier for this deployment, sent with each feed request. On a single-host install leave it unset — the server mints one on first boot and sends it, and the Bastion only falls back to this. **A Bastion on its own host has no server to mint one, so there it is required**, and `docker-compose.bastion.yml` will not start without it. Any valid UUID; the server logs the one it minted at boot. |
 | `POSTURERMM_FEED__TIER` | `community` | Feed channel: `community` or `pro`. |
 | `POSTURERMM_FEED__SYNC_INTERVAL_HOURS` | `1` | How often the Bastion checks for new content, in hours. |
 
-**In a split deployment the secret must match on both sides.** Running the Bastion on a separate
-host — in a DMZ, say — there is no shared volume to pass it through, so generate one value and put
-the **same** value in the `.env` on both hosts. The standalone bastion compose file will not start
-without it.
+### Running the Bastion on its own host
+
+Take `docker-compose.bastion.yml` from the release page, put it on the DMZ host with an `.env`
+beside it, and start it with `docker compose -f docker-compose.bastion.yml up -d`. It publishes
+:8300; point the protected-zone server at it with `POSTURERMM_BASTION__URL`.
+
+Two values are required there, and the compose file refuses to start without either:
+
+- **`POSTURERMM_BASTION__SECRET` must match on both sides.** There is no shared volume across
+  hosts to pass it through, so generate one value — `openssl rand -hex 32` — and put the **same**
+  value in the `.env` on both hosts.
+- **`POSTURERMM_FEED__DEPLOYMENT_ID` must be set.** On a single-host install the server mints this
+  and sends it with every request; a Bastion running alone has no server to mint one, and the feed
+  rejects unidentified requests. Take the UUID the server logged at first boot and put it here.
 
 ## Keys and logging
 
@@ -100,11 +110,10 @@ entry records the proxy instead of the client. That mistake is wrong but visible
 believing a header from an address that is not a proxy, is invisible, which is why it is not the
 default.
 
-## Mirroring the images
+## Where the images come from
 
-`POSTURERMM_REGISTRY_OWNER` (default `posturermm`) is the registry namespace the images come from.
-The default namespace is public and needs no `docker login`. Set it only if you mirror the images
-into a namespace of your own.
+The images come from one public namespace — `ghcr.io/posturermm` — which needs no `docker login`.
+That namespace is fixed and there is no setting to change it.
 
 `NVD_API_KEY` and `GITHUB_TOKEN` are not settings for this stack. The server never calls NVD or
 GitHub directly — vulnerability and application data arrive as prepared content through the Bastion.

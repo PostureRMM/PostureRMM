@@ -2,9 +2,15 @@
 
 ## Requirements
 
-Docker Engine 20.10+, Compose v2 and `curl` on any Linux host. **Nothing to edit** — no values
-to choose, no certificates to obtain, no DNS. (Debian and Ubuntu minimal images ship without
-`curl`: `sudo apt install curl` first.)
+Docker Engine 20.10+, Compose v2 and `curl` on any Linux host, with at least 4 GB of RAM and
+10 GB free. **Nothing to edit** — no values to choose, no certificates to obtain, no DNS.
+
+Debian and Ubuntu minimal images ship without `curl` (`sudo apt install curl` first), and without
+Docker. If you need Docker, its own installer covers every supported distribution:
+
+```bash
+curl -fsSL https://get.docker.com | sh
+```
 
 Windows endpoints supported: **11, 10, and Server 2016 / 2019 / 2022 / 2025.**
 
