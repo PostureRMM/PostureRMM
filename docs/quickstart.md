@@ -1,5 +1,8 @@
 # Quickstart
 
+<!-- Mirrored verbatim to PostureRMM/PostureRMM; never edit on the hub.
+`just public-docs-sync` — deploy/release/check-public-docs.sh reds on a difference. -->
+
 ## Requirements
 
 Docker Engine 20.10+, Compose v2 and `curl` on any Linux host, with at least 4 GB of RAM and
@@ -11,6 +14,11 @@ Docker. If you need Docker, its own installer covers every supported distributio
 ```bash
 curl -fsSL https://get.docker.com | sh
 ```
+
+Do not use `apt install docker-compose` as a version check: Ubuntu 22.04/24.04 and Debian 12
+provide the legacy Python v1 there, which is not supported. `preflight.sh` probes both
+`docker compose` and `docker-compose`, picks the newer, and prints instructions for your OS when
+either is missing or too old.
 
 Windows endpoints supported: **11, 10, and Server 2016 / 2019 / 2022 / 2025.**
 
@@ -28,8 +36,13 @@ the name agents will use to reach it, pulls the images and starts the stack.
 
 ## First login
 
-Watch `docker compose logs -f backend` for the generated `admin@localhost` password, then log in
-at `https://<host>/`. Add your first endpoint from **Endpoints → Install first endpoint**, which
+First boot writes the generated `admin@localhost` password to a 0600 file and logs that path
+rather than the value. Read it, then log in at `https://<host>/`:
+
+```bash
+docker compose exec backend cat /app/data/bootstrap-admin-password
+```
+ Add your first endpoint from **Endpoints → Install first endpoint**, which
 hands you a one-line PowerShell command to run on it.
 
 ## Air-gapped install
