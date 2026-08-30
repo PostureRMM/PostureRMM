@@ -139,6 +139,10 @@ Reach for **[docs/configuration.md](docs/configuration.md)** when you want a rea
 different port, your own certificate, a split deployment, the content feed, or log and audit
 tuning — not before installing.
 
+Running it in earnest — TLS with your own certificate, a Bastion in a DMZ, the segment proxy,
+backup and restore, upgrades, metrics and troubleshooting — is
+**[docs/PRODUCTION.md](docs/PRODUCTION.md)**.
+
 ## Support and downloads
 
 Everything is here on GitHub for now — there is no support portal, no ticket system, and no

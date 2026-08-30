@@ -267,7 +267,7 @@ For a split topology, where the Bastion sits on a separate DMZ host and the back
 openssl rand -hex 32
 ```
 
-1. **On the DMZ host** — copy `docker-compose.bastion.yml` (that file alone; it bind-mounts nothing), then create `.env` beside it with `POSTURERMM_VERSION`, the generated secret, and the deployment id from the backend's boot log — the compose refuses whichever is absent:
+1. **On the DMZ host** — take [`docker-compose.bastion.yml`](https://github.com/PostureRMM/PostureRMM/releases/latest/download/docker-compose.bastion.yml) from the release page (that file alone; it bind-mounts nothing), then create `.env` beside it with `POSTURERMM_VERSION`, the generated secret, and the deployment id from the backend's boot log — the compose refuses whichever is absent:
    ```bash
    POSTURERMM_BASTION__SECRET=<generated-64-character-hex-value>
    POSTURERMM_FEED__DEPLOYMENT_ID=<uuid-from-the-backend-boot-log>
