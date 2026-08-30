@@ -54,6 +54,9 @@ travels inside the bundle, so first enrollment works with no internet at any poi
 Every setting is optional. See [configuration.md](configuration.md) for hostnames, ports, your own
 certificate, split deployments, the content feed, and log and audit tuning.
 
+[PRODUCTION.md](PRODUCTION.md) is the operator's runbook: a Bastion in a DMZ, the segment proxy,
+backup and restore, upgrades, metrics and troubleshooting.
+
 ---
 
 Back to the [README](../README.md).
