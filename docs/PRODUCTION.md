@@ -396,6 +396,12 @@ years of backlog does not hold a long-lived lock on a live table, and pruning
 the audit log writes one more audit row (`audit_log_prune`) naming the row count
 and the cutoff — the trail records its own trimming.
 
+A run that cannot read all four windows — a database blip, or a value edited
+into something that is not a day count — prunes nothing and logs the key at
+fault, instead of falling back to the defaults above. The next daily run
+recovers on its own; repair a bad value by saving a real number on the
+Retention page.
+
 Three telemetry histories are pruned on fixed windows you do not set, hourly
 rather than daily: performance metrics and endpoint reachability at **30 days**,
 and disk SMART history at **2 years** — affordable because that history is
