@@ -45,6 +45,10 @@ docker compose exec backend cat /app/data/bootstrap-admin-password
  Add your first endpoint from **Endpoints → Install first endpoint**, which
 hands you a one-line PowerShell command to run on it.
 
+That command carries no install key, so the endpoint arrives in the approval queue rather than
+straight into the fleet. Admit it from the same screen — or at **Settings → Install keys → Pending
+approval** — and its first compliance scan finishes a few minutes later.
+
 ## Air-gapped install
 
 Take `posturermm-offline-vX.Y.Z.tar.gz` from the same release, carry it across however your air gap
