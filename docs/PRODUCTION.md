@@ -437,12 +437,22 @@ BACKUP_DIR="$(pwd)/posturermm-backup-$(date -u +%Y%m%dT%H%M%SZ)"
 mkdir -m 700 "$BACKUP_DIR"
 cp --preserve=mode .env "$BACKUP_DIR/.env"
 
+# Record the CA fingerprint now, so the restore has something to compare against.
+docker compose exec -T backend cat /app/tls/ca.crt |
+  openssl x509 -noout -fingerprint -sha256 > "$BACKUP_DIR/ca-fingerprint.txt"
+
 # Quiesce the service that mounts the volumes being archived.
 docker compose stop backend
 
 # Back up PostgreSQL logically; do not copy its live data-directory volume.
+# The dump lands under a .part name and is renamed only once its completion
+# marker is present. A dump that dies part-way — the database stopped, the disk
+# full — leaves no posturermm.sql at all, so every step below fails loudly
+# instead of checksumming and shipping a backup that restores to nothing.
 docker compose exec -T db pg_dump -U posturermm posturermm \
-  > "$BACKUP_DIR/posturermm.sql"
+  > "$BACKUP_DIR/posturermm.sql.part"
+tail -1 "$BACKUP_DIR/posturermm.sql.part" | grep -q 'PostgreSQL database dump complete' &&
+  mv "$BACKUP_DIR/posturermm.sql.part" "$BACKUP_DIR/posturermm.sql"
 
 # Archive every non-regenerable application volume, preserving dotfiles,
 # ownership, and permissions. Exclude the separately-mounted downloads cache
@@ -455,11 +465,13 @@ docker run --rm --volumes-from posturermm-backend \
   --mount "type=bind,src=$BACKUP_DIR,dst=/backup" "$ARCHIVE_IMAGE" \
   tar -czf /backup/posturermm-tls.tar.gz -C /app/tls .
 
-# Make corruption detectable, then return the application to service.
+# Make later corruption detectable, then return the application to service.
+# These sums cover only what happens to the files after this point; the dump's
+# own completeness was settled above, by the rename.
 (
   cd "$BACKUP_DIR"
   sha256sum .env posturermm.sql posturermm-data.tar.gz \
-    posturermm-tls.tar.gz > SHA256SUMS
+    posturermm-tls.tar.gz ca-fingerprint.txt > SHA256SUMS
 )
 docker compose start backend
 until docker compose exec -T backend curl -sf http://localhost:3000/health/ready \
@@ -487,11 +499,24 @@ and shares it with the Bastion; DMZ-split, it comes from
 `POSTURERMM_BASTION__SECRET` in `.env`, which *is* in the backup set.
 
 Restore only onto a fresh host with no existing PostureRMM containers or named
-volumes. Install the same release's compose files, put the backup directory
-beside them, and **do not run `docker compose up` yet** — the secret and TLS
-volumes must be populated before the backend's first boot. Boot it against empty
-volumes and it silently writes new secrets and a new CA, which a later restore
-cannot undo.
+volumes, and **do not run `docker compose up` yet** — the secret and TLS volumes
+must be populated before the backend's first boot. Boot it against empty volumes
+and it silently writes new secrets and a new CA, which a later restore cannot
+undo.
+
+Fetch the compose file for the release the backup came from — not `latest`,
+which would restore an older dump under a newer backend — and put the backup
+directory beside it:
+
+```bash
+mkdir posturermm && cd posturermm
+curl -LO https://github.com/PostureRMM/PostureRMM/releases/download/vX.Y.Z/docker-compose.yml
+```
+
+Agents reach this server by the address baked into their install, so the
+replacement host has to answer at the one the lost host had. Give it that
+address before you restore; switches and clients can hold the old one in ARP for
+a few minutes after the move.
 
 ```bash
 # Point this at the complete backup directory and verify it before use.
@@ -519,9 +544,11 @@ docker compose start db
 until docker compose exec -T db pg_isready -U posturermm -d posturermm \
   >/dev/null; do sleep 2; done
 docker compose exec -T db psql -v ON_ERROR_STOP=1 -U posturermm posturermm \
-  < "$BACKUP_DIR/posturermm.sql"
+  < "$BACKUP_DIR/posturermm.sql" &&
 
 # Only now may the backend boot; bring the application services back together.
+# Chained to the load above on purpose: a backend that boots over a half-loaded
+# database migrates it, and the restore can no longer simply be repeated.
 docker compose start backend bastion
 until docker compose exec -T backend curl -sf http://localhost:3000/health/ready \
   >/dev/null; do sleep 2; done
@@ -529,14 +556,18 @@ docker compose ps
 ```
 
 After restore, verify an existing login and a 2FA-enabled account before
-declaring recovery complete, and compare the restored CA fingerprint against a
-known-good value:
+declaring recovery complete, and check the restored CA against the fingerprint
+the backup recorded — if they differ, the backend booted before the TLS volume
+was populated and every enrolled agent is about to stop connecting:
 
 ```bash
 docker cp posturermm-backend:/app/tls/ca.crt ./restored-ca.crt
 openssl x509 -in ./restored-ca.crt -noout -fingerprint -sha256
+cat "$BACKUP_DIR/ca-fingerprint.txt"
 rm ./restored-ca.crt
 ```
+
+Then confirm an enrolled agent checks in on its own, without being reinstalled.
 
 ## Troubleshooting
 
