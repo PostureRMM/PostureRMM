@@ -578,6 +578,13 @@ Then confirm an enrolled agent checks in on its own, without being reinstalled.
 - **Agent can't connect:** verify DNS resolution, port 443 reachable, cert valid. `POSTURERMM_SERVER__PUBLIC_URL` must match what the agent sees.
 - **Bastion returning 401 to the backend:** the bearer secret disagrees. The Bastion checks `POSTURERMM_BASTION__SECRET` (or, unset, the file at `[bastion] secret_path`) against what the backend presents; both sides must hold the same 32+ character value.
 - **Bastion returning 502 on feed pulls:** it could not reach the feed origin. Check egress from the DMZ host to `[feed] api_url` (default `https://feed.posturermm.com`) and `docker compose logs bastion` for the upstream error.
+- **Lost the admin password:** `/app/data/bootstrap-admin-password` is one-time — once changed, the next restart overwrites it with a note saying so, so what that file returns is either a working password or nothing. Reset from the Docker host:
+
+  ```bash
+  docker compose exec backend ./posturermm-backend reset-admin-password admin@localhost
+  ```
+
+  The new password goes to your terminal's stdout, never the container log, and the next login must change it. Live sessions end; API keys survive, because deactivating the user is what kills every credential. An unknown email exits non-zero. It is **deliberately unauthenticated** — anyone who can `docker compose exec` here can already read the JWT secret and write the `users` table — and it needs the backend running, so fix a crash-loop first.
 
 ---
 

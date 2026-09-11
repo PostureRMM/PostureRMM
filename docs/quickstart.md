@@ -42,7 +42,11 @@ rather than the value. Read it, then log in at `https://<host>/`:
 ```bash
 docker compose exec backend cat /app/data/bootstrap-admin-password
 ```
- Add your first endpoint from **Endpoints → Install first endpoint**, which
+
+This password is one-time: once you change it, the next restart replaces that file with a note
+saying so. If you lose it, [PRODUCTION.md](PRODUCTION.md#troubleshooting) has the reset command.
+
+Add your first endpoint from **Endpoints → Install first endpoint**, which
 hands you a one-line PowerShell command to run on it.
 
 That command carries no install key, so the endpoint arrives in the approval queue rather than
