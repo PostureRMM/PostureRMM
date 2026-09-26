@@ -1,7 +1,7 @@
 # PostureRMM Production Deployment
 
 <!-- Mirrored verbatim to PostureRMM/PostureRMM; never edit on the hub.
-`just public-docs-sync` — deploy/release/check-public-docs.sh reds on a difference. -->
+Each release publishes it there — deploy/release/check-public-docs.sh. -->
 
 [quickstart.md](quickstart.md) installs the stack and
 [configuration.md](configuration.md) is the settings reference. This is the
@@ -24,7 +24,7 @@ bastion → HTTP  → backend:3000 (admin API, status, sync)
 
 No separate web or reverse-proxy tier: the backend serves both the JSON API and
 the admin UI. Its `:80` listener redirects to HTTPS except for the plaintext
-`/install.ps1` and `/downloads/*` bootstrap paths, and its `:3000` plane is
+`/install.ps1`, `/install-agent.sh` and `/downloads/*` bootstrap paths, and its `:3000` plane is
 never published to the host. Only the Bastion talks to the internet.
 
 ## License
@@ -270,10 +270,50 @@ Endpoints → Install agent → More install options and pass `SERVERURL` on the
 `msiexec` command line; drop `install-key.txt` beside the MSI so the agent picks
 it up from the captured source dir.
 
+### Linux endpoints
+
+Debian 12/13, Ubuntu 22.04/24.04 LTS, RHEL, Rocky Linux and AlmaLinux 9/10, on
+x86_64 with systemd. Run the install screen's command as a user who can `sudo`:
+
+```bash
+curl -fsSL "http://posturermm.example.com/install-agent.sh?key=..." | sudo sh
+wget -qO- "http://posturermm.example.com/install-agent.sh?key=..." | sudo sh   # no curl
+curl -fsSL http://posturermm.example.com/install-agent.sh | sudo sh            # keyless
+```
+
+It is the same plain-HTTP bootstrap as Windows, with the same
+[trust caveat](#tls-and-agent-trust). Before writing anything, the script
+refuses an unsupported host and checks the package's SHA-256. It then writes
+`/etc/posturermm/agent.conf` (mode 0600) and the install key, installs the
+`.deb` or `.rpm` with `dpkg -i` or `rpm -U`, and the package enables and starts
+`posturermm-agent.service`. Re-run over the same version, it re-writes the
+server settings and restarts the agent.
+
+The console offers the command once both packages are on the server. They come
+from the product feed or the offline bundle.
+
+| Path | Holds |
+|---|---|
+| `/etc/posturermm/agent.conf` | `ServerUrl`, `TrustMode`, `ServerCertPin`, as `Name=Value` lines |
+| `/var/lib/posturermm` | Credentials and state; `upgrade/` keeps one previous package for rollback |
+| `/var/cache/posturermm` | Rebuildable cache: the agent's private apt or dnf tree |
+| `/var/log/posturermm/agent.log` | The agent log. Panics also reach the journal: `journalctl -u posturermm-agent` |
+
+A failed upgrade rolls back to the kept package. `apt purge posturermm-agent` or
+`dnf remove posturermm-agent` deletes config, state and cache and keeps the
+logs; `apt remove` keeps everything.
+
+Not on Linux: the tray companion, remote desktop and tamper protection. Scripts
+run in `sh` or `bash`. Updates are the distribution packages the server carries,
+installed by the host's apt or dnf from the agent's private source list, never
+the host's repositories. RHEL itself, and AlmaLinux 10 on a CPU without
+x86-64-v3, are scanned but not patched.
+
 ### Changing the agent's backend URL
 
-`ServerUrl` is registry-canonical — the agent reads
-`HKLM\SOFTWARE\PostureRMM\Agent\ServerUrl` at boot and ignores TOML and env. Two
+`ServerUrl` is store-canonical: the agent reads it at boot from
+`HKLM\SOFTWARE\PostureRMM\Agent\ServerUrl` on Windows, or from
+`/etc/posturermm/agent.conf` on Linux, and ignores TOML and env. Two
 supported paths to change it:
 
 1. **Per-machine** — elevated PowerShell on the endpoint:
@@ -282,7 +322,12 @@ supported paths to change it:
    posturermm-agent.exe config get     # sanity check
    ```
    Validates the URL, writes the registry value, restarts `PostureRMM-Agent`
-   and emits an `audit.config` log line.
+   and emits an `audit.config` log line. On Linux, as root:
+   ```bash
+   sudo posturermm-agent config set server.url https://posturermm.example.com
+   ```
+   It writes `ServerUrl` into `agent.conf`, keeping every other line, and
+   restarts `posturermm-agent`.
 
 2. **Fleet-wide (SCCM / Intune / GPO)** — push an explicit reinstall:
    ```cmd
@@ -291,7 +336,8 @@ supported paths to change it:
    ```
    A command-line `SERVERURL=` always wins, on upgrade as on fresh install; omit
    it and the MSI recovers the operator's existing value rather than stranding
-   the agent.
+   the agent. On Linux, run the new server's one-liner: it re-writes the server
+   settings in `agent.conf` and restarts the agent.
 
 ## Operations
 
