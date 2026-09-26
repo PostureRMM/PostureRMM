@@ -1,7 +1,7 @@
 # Configuration
 
 <!-- Mirrored verbatim to PostureRMM/PostureRMM; never edit on the hub.
-`just public-docs-sync` — deploy/release/check-public-docs.sh reds on a difference. -->
+Each release publishes it there — deploy/release/check-public-docs.sh. -->
 
 **Every setting is optional, and a default install sets none of them.** The compose file from the
 release carries its own version, `preflight.sh` generates the database password, and the server
