@@ -61,9 +61,9 @@ Two consequences worth knowing before you operate this:
   adopts it **only** if the server can prove it knows that endpoint's own
   enrollment secret. Expect the fleet to reconverge within minutes.
 
-  Losing both files outright is survivable for the *agents* for the same reason.
-  What you lose is everything that trusted the old CA by hand: browsers, OS
-  trust stores, external tooling. Both files stay in the backup set.
+  Losing both files is survivable for agents. What you lose is everything that
+  trusted the old CA by hand: browsers, OS trust stores, external tooling. Both
+  files stay in the backup set.
 
 **The pin is delivered over plain HTTP.** Port 80 serves `/install.ps1`
 deliberately: PowerShell 5.1 on a fresh Windows Server 2016 cannot complete an
@@ -82,8 +82,8 @@ a tunnel), set `POSTURERMM_SERVER__AGENT_TRUST_MODE=system_roots` explicitly.
 
 [configuration.md](configuration.md) explains why
 `POSTURERMM_SERVER__TRUSTED_PROXIES` defaults to empty; running the stack as
-shipped, there is nothing to do. Put your own terminator in front and two
-settings become required, not optional:
+shipped, there is nothing to do. With your own terminator in front, three
+settings are required:
 
 1. **`POSTURERMM_SERVER__TRUSTED_PROXIES` = your terminator's address.** Skip
    it and every request resolves to the proxy: each audit row records the proxy
@@ -93,12 +93,13 @@ settings become required, not optional:
    address it does not trust; that line means this setting is missing.
 2. **`Strict-Transport-Security` is your terminator's to send.** The backend
    emits HSTS only when it terminates TLS itself, so under
-   `POSTURERMM_TLS__ENABLED=false` it sends none — a promise about the edge is
-   only the edge's to make.
+   `POSTURERMM_TLS__ENABLED=false` it sends none.
+3. **Forward `Host` unchanged** (nginx: `proxy_set_header Host $host;`).
+   Browsers lacking `Sec-Fetch-Site` must send an `Origin` matching `Host`, or
+   their forms get 403 `cross-origin request refused`.
 
-A PostureRMM **proxy relay** is governed by the same rule: to attribute agent
-audit rows to the *agent* rather than to the relay, list the relay's address
-here.
+List a PostureRMM **proxy relay**'s address here too, so agent audit rows name
+the agent, not the relay.
 
 ## Bastion in a DMZ
 
@@ -113,7 +114,7 @@ file.
 
 1. **On the DMZ host** — take
    [`docker-compose.bastion.yml`](https://github.com/PostureRMM/PostureRMM/releases/latest/download/docker-compose.bastion.yml)
-   from the release page (that file alone; it bind-mounts nothing), then create
+   from the release page (that file alone), then create
    `.env` beside it with `POSTURERMM_VERSION`, the generated secret, and the
    deployment id from the backend's boot log — the compose refuses whichever is
    absent:
@@ -179,15 +180,14 @@ reach the backend directly point at a proxy in their own segment, which relays
 for them, caches downloads so a hundred endpoints pull a patch once, and queues
 writes durably while the backend is unreachable.
 
-A proxy runs where its agents are, not beside the backend, so the stock
-`docker-compose.yml` defines none. It ships as its own release download,
-`docker-compose.proxy.yml`, version-stamped like the stock one and carried in
-the offline bundle with its image.
+A proxy runs where its agents are, so the stock `docker-compose.yml` defines
+none. It ships as the release download `docker-compose.proxy.yml`, also carried
+in the offline bundle with its image.
 
 ### Registering it
 
-1. In the admin UI, **Proxies → New**. You get an ID and a secret; the secret is
-   shown once.
+1. In the admin UI, **Proxies → New**. Copy the ID, the one-shot secret and,
+   on a self-signed server, the server CA fingerprint.
 2. On a Docker host in the segment, fetch it and write `.env` beside it:
 
 ```bash
@@ -196,12 +196,14 @@ cat > .env <<'EOF'
 POSTURERMM_PROXY_BACKEND_URL=https://posturermm.example.com
 POSTURERMM_PROXY_ID=<id from step 1>
 POSTURERMM_PROXY_SECRET=<secret from step 1>
+POSTURERMM_PROXY_BACKEND_CA_PIN=<server CA fingerprint from step 1>
+POSTURERMM_PROXY_TLS_HOSTNAME=<proxy-host>
 EOF
 docker compose -f docker-compose.proxy.yml up -d
 ```
 
-3. Point that segment's agents at `http://<proxy-host>:8443` instead of the
-   backend. The proxy injects `X-Forwarded-For` and `X-Proxy-ID`, so the audit
+3. Point that segment's agents at `https://<proxy-host>:8443`, the host named
+   in `POSTURERMM_PROXY_TLS_HOSTNAME`. The proxy injects `X-Forwarded-For` and `X-Proxy-ID`, so the audit
    log still records the real endpoint — provided
    `POSTURERMM_SERVER__TRUSTED_PROXIES` names the proxy's address. Omit it and
    every row from that segment shows the proxy instead.
@@ -216,27 +218,29 @@ variables. The image ships no config file; an absent one is not an error.
 | `POSTURERMM_PROXY_BACKEND_URL` | — | Where to relay. Required. |
 | `POSTURERMM_PROXY_ID` | — | Proxy record ID from the UI. Required. |
 | `POSTURERMM_PROXY_SECRET` | — | Shared secret from the UI. Required. |
+| `POSTURERMM_PROXY_BACKEND_CA_PIN` | — | Server CA fingerprint from the UI; omit for a real certificate. |
+| `POSTURERMM_PROXY_TLS_HOSTNAME` | — | The host agents reach the proxy by; its certificate is issued for it. Required. |
 | `POSTURERMM_PROXY_LISTEN_ADDRESS` | `0.0.0.0:8443` | Listener. |
-| `POSTURERMM_PROXY_TLS_ENABLED` | `false` | See the TLS note below. |
+| `POSTURERMM_PROXY_TLS_ENABLED` | `true` | `false` is the plaintext opt-out. See the TLS note below. |
+| `POSTURERMM_PROXY_TLS_CERT` / `_KEY` | — | Your own certificate chain and key, served instead of the minted one. |
 | `POSTURERMM_PROXY_LOG_LEVEL` | `info` | |
 | `POSTURERMM_PROXY_CONFIG` | `./config/posturermm-proxy.toml` | Optional TOML, mounted by you. |
 
-**TLS.** The listener is plain HTTP on `:8443` by default — the port number is
-conventional, not a promise. Across any boundary you do not control, either set
-`POSTURERMM_PROXY_TLS_ENABLED=true` with `cert_path`/`key_path` in a mounted
-TOML, or front the proxy with your own TLS terminator. If you enable TLS,
-**override the image healthcheck too** — it curls
-`http://localhost:8443/health` and reports the container unhealthy against an
-HTTPS listener.
+**TLS.** The proxy serves HTTPS from a CA it mints and keeps in the
+`posturermm-proxy-tls` volume. Agents pin that CA as they pin the server's; the
+proxy's page in the admin UI shows its **TLS CA fingerprint**. Losing the
+volume means re-pinning every agent behind the proxy. `TLS_ENABLED=false` is
+only for a proxy behind your own TLS terminator.
+
+With no `BACKEND_CA_PIN` the proxy trusts only a public certificate. Changing
+the server's CA means re-pinning every proxy.
 
 **Liveness.** `GET /health` answers **503** with
 `{"status":"degraded","backend_reachable":false}` when the backend is
-unreachable. That is a real signal but *not* a reason to restart the proxy:
-serving its segment from cache and queueing writes for replay is exactly what it
-should be doing during an outage. The image's healthcheck therefore probes
-liveness only. If you wire this endpoint into your own monitoring, treat
-503-degraded as "backend down", not "proxy down". The proxy also heartbeats the
-backend every 60s, so one that stops checking in shows as stale in the UI.
+unreachable. Serving from cache and queueing writes is correct during an
+outage, so the image's healthcheck probes liveness only. In your own
+monitoring, treat 503-degraded as "backend down", not "proxy down". A proxy
+that misses its 60s heartbeat shows as stale in the UI.
 
 ## Agent rollout
 
@@ -285,7 +289,7 @@ It is the same plain-HTTP bootstrap as Windows, with the same
 [trust caveat](#tls-and-agent-trust). Before writing anything, the script
 refuses an unsupported host and checks the package's SHA-256. It then writes
 `/etc/posturermm/agent.conf` (mode 0600) and the install key, installs the
-`.deb` or `.rpm` with `dpkg -i` or `rpm -U`, and the package enables and starts
+`.deb` or `.rpm`, and the package enables and starts
 `posturermm-agent.service`. Re-run over the same version, it re-writes the
 server settings and restarts the agent.
 
@@ -353,17 +357,52 @@ docker compose restart backend
 # Upgrade — replace docker-compose.yml with the new release's copy, which
 # carries that release's version baked in, then pull and recreate. Nothing to
 # edit; add POSTURERMM_VERSION to .env only to pin a version against the file.
+# Every `up -d` first runs the one-shot db-setup as the database superuser
+# (`posturermm`, whose password only `db` and `db-setup` receive). It creates
+# `posturermm_owner` (no SUPERUSER, BYPASSRLS, CREATEROLE or CREATEDB), gives it
+# the database and everything in it, and writes its generated password to
+# /app/data/pgpass. The backend logs in as that role and refuses a superuser,
+# so an install from before db-setup converts on its first `up -d`. On your own
+# PostgreSQL, give the backend such a role, owning its database.
 curl -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/docker-compose.yml
 docker compose pull
 docker compose up -d
 
-# Drop into the DB shell
+# Drop into the DB shell, as the superuser
 docker compose exec db psql -U posturermm posturermm
 ```
 
 Read the target version's release notes. A release needing a one-time manual
 step says so there, and the backend diagnoses that class of problem itself — it
 refuses to start, names the paths and identity it needs, and prints the recipe.
+
+### Verifying a release
+
+`SHA256SUMS.txt` lists every release file, SBOMs included. In the directory
+holding your downloads:
+
+```bash
+curl -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/SHA256SUMS.txt
+sha256sum -c --ignore-missing SHA256SUMS.txt
+```
+
+Each release attaches CycloneDX 1.5 SBOMs: `sbom-<binary>-<version>-<target>.cdx.json`
+per binary and `sbom-image-<name>-<version>.cdx.json` per image, which also
+lists its Debian packages. Load them into your scanner, or read one directly:
+
+```bash
+jq -r '.components[] | "\(.name) \(.version)"' sbom-image-backend-X.Y.Z.cdx.json
+```
+
+Every binary embeds its own dependency list too, so one with no SBOM beside it
+can still be checked against the RustSec advisory database. `Found 'cargo
+auditable' data` confirms the list was read; the exit code is non-zero when an
+advisory matches:
+
+```bash
+cargo install cargo-audit --locked
+cargo audit bin --max-binary-size 1000000000 posturermm-agent-X.Y.Z.exe
+```
 
 ### Pushing the images into a private registry
 
@@ -415,7 +454,7 @@ public side.
 Every pooled connection runs `SET jit = off`, so `SHOW jit` in a `psql` shell
 reports `on` while the application runs with it off. It is set in the pool, not
 in `docker-compose.yml`, so it holds against your own PostgreSQL too. Measured
-on a 10-endpoint fleet with JIT as the only variable:
+with JIT as the only variable:
 
 | query | with JIT | without |
 |---|---|---|
@@ -438,15 +477,12 @@ the same scheduler job:
 
 The first three accept 30–3650 days with no "never prune" option; audit-log
 retention accepts 0–3650. Pruning runs in bounded batches so a first run against
-years of backlog does not hold a long-lived lock on a live table, and pruning
-the audit log writes one more audit row (`audit_log_prune`) naming the row count
-and the cutoff — the trail records its own trimming.
+years of backlog does not hold a lock, and pruning the audit log writes one more
+audit row (`audit_log_prune`) naming the row count and the cutoff.
 
-A run that cannot read all four windows — a database blip, or a value edited
-into something that is not a day count — prunes nothing and logs the key at
-fault, instead of falling back to the defaults above. The next daily run
-recovers on its own; repair a bad value by saving a real number on the
-Retention page.
+A run that cannot read all four windows prunes nothing and logs the key at
+fault, instead of falling back to the defaults above. Repair a bad value by
+saving a real number on the Retention page; the next daily run recovers.
 
 Three telemetry histories are pruned on fixed windows you do not set, hourly
 rather than daily: performance metrics and endpoint reachability at **30 days**,
@@ -497,7 +533,7 @@ docker compose stop backend
 # instead of checksumming and shipping a backup that restores to nothing.
 docker compose exec -T db pg_dump -U posturermm posturermm \
   > "$BACKUP_DIR/posturermm.sql.part"
-tail -1 "$BACKUP_DIR/posturermm.sql.part" | grep -q 'PostgreSQL database dump complete' &&
+tail -n 5 "$BACKUP_DIR/posturermm.sql.part" | grep -q 'PostgreSQL database dump complete' &&
   mv "$BACKUP_DIR/posturermm.sql.part" "$BACKUP_DIR/posturermm.sql"
 
 # Archive every non-regenerable application volume, preserving dotfiles,
@@ -532,7 +568,7 @@ the same controls as production credentials.
 |---|---|---|
 | `posturermm.sql` | The portable backup of `posturermm-db-data`: users, endpoints, configuration, audit history, and all other relational state | The application data is gone. A raw copy of the live PostgreSQL volume is not a substitute for `pg_dump`. |
 | `posturermm-tls.tar.gz` | `posturermm-tls`: the internal CA and key, leaf certificate and key, and auto-generation sentinel | Every agent pinned to the old leaf/CA rejects the replacement certificate and stops connecting. |
-| `posturermm-data.tar.gz` | `posturermm-data`: the auto-provisioned `jwt-secret`, `totp-secret`, and other backend-persisted secret material | Existing access tokens no longer validate. More importantly, stored TOTP secrets cannot be decrypted and MFA backup-code hashes no longer verify, locking 2FA users out. |
+| `posturermm-data.tar.gz` | `posturermm-data`: the auto-provisioned `jwt-secret`, `totp-secret`, and other backend-persisted secret material | Existing access tokens no longer validate. More importantly, stored TOTP secrets cannot be decrypted and MFA backup-code hashes no longer verify, locking 2FA users out. Agents cannot re-anchor to a new CA until each checks in again, so losing this with `posturermm-tls` strands them. |
 | `.env` | `POSTGRES_PASSWORD` and any operator-supplied `JWT_SECRET` or `POSTURERMM_CREDENTIAL_KEY` | PostgreSQL credentials no longer match, explicitly supplied JWT keys rotate, and stored credentials/evidence-signing keys encrypted under the credential key become unusable. Neither value is in `pg_dump`. |
 
 Four volumes are deliberately excluded; none re-keys the installation or holds
@@ -585,17 +621,19 @@ docker run --rm --volumes-from posturermm-backend \
   --mount "type=bind,src=$BACKUP_DIR,dst=/backup" "$ARCHIVE_IMAGE" \
   tar -xzf /backup/posturermm-tls.tar.gz -C /app/tls
 
-# Restore PostgreSQL while the backend is still stopped.
+# Restore PostgreSQL while the backend is still stopped. db-setup first: the
+# dump hands its objects to the backend's role, which must exist.
 docker compose start db
 until docker compose exec -T db pg_isready -U posturermm -d posturermm \
   >/dev/null; do sleep 2; done
+docker compose run --rm db-setup &&
 docker compose exec -T db psql -v ON_ERROR_STOP=1 -U posturermm posturermm \
   < "$BACKUP_DIR/posturermm.sql" &&
 
 # Only now may the backend boot; bring the application services back together.
 # Chained to the load above on purpose: a backend that boots over a half-loaded
 # database migrates it, and the restore can no longer simply be repeated.
-docker compose start backend bastion
+docker compose up -d
 until docker compose exec -T backend curl -sf http://localhost:3000/health/ready \
   >/dev/null; do sleep 2; done
 docker compose ps
@@ -620,9 +658,9 @@ Then confirm an enrolled agent checks in on its own, without being reinstalled.
 - **Backend won't start:** `docker compose logs backend`. Migrations log themselves on startup.
 - **502 from your own upstream proxy:** the backend container is down or not ready. Check `docker compose ps` — `backend` should be `healthy` — then `docker compose logs backend`.
 - **Backend not serving HTTPS:** verify the `posturermm-tls` volume is mounted and `server.crt` / `server.key` exist; if not, check `docker compose logs backend` for certificate or listener errors.
-- **UI loads blank / 404:** the admin UI is served at `/`; if it does not render the login screen the backend is not serving traffic yet (`docker compose logs backend`).
+- **UI loads blank / 404:** the backend is not serving traffic yet (`docker compose logs backend`).
 - **Agent can't connect:** verify DNS resolution, port 443 reachable, cert valid. `POSTURERMM_SERVER__PUBLIC_URL` must match what the agent sees.
-- **Bastion returning 401 to the backend:** the bearer secret disagrees. The Bastion checks `POSTURERMM_BASTION__SECRET` (or, unset, the file at `[bastion] secret_path`) against what the backend presents; both sides must hold the same 32+ character value.
+- **Bastion returning 401 to the backend:** the bearer secret disagrees. Both sides must hold the same 32+ character `POSTURERMM_BASTION__SECRET` (or, unset on the Bastion, the file at `[bastion] secret_path`).
 - **Bastion returning 502 on feed pulls:** it could not reach the feed origin. Check egress from the DMZ host to `[feed] api_url` (default `https://feed.posturermm.com`) and `docker compose logs bastion` for the upstream error.
 - **Lost the admin password:** `/app/data/bootstrap-admin-password` is one-time — once changed, the next restart overwrites it with a note saying so, so what that file returns is either a working password or nothing. Reset from the Docker host:
 
