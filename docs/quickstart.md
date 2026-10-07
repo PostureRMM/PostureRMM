@@ -66,8 +66,8 @@ or, on a host with no `curl`, `wget -qO- http://<host>/install-agent.sh | sudo s
 only once the Linux agent packages are on the server; until then it says why.
 
 These commands carry no install key, so the endpoint arrives in the approval queue rather than
-straight into the fleet. Admit it from the same screen — or at **Settings → Install keys → Pending
-approval** — and its first compliance scan finishes a few minutes later.
+straight into the fleet. Admit it from the same screen — or at **Settings → Enrollment → Endpoints
+awaiting approval** — and its first compliance scan finishes a few minutes later.
 
 ## Air-gapped install
 
