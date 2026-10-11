@@ -94,14 +94,14 @@ Two values are required there, and the compose file refuses to start without eit
 | `JWT_SECRET` | generated on the first start, kept in the `posturermm-data` volume | Signing key for login sessions. At least 32 characters. Set it only to rotate the key or to supply one from your own key management. |
 | `POSTURERMM_AUTH__TOTP_SECRET` | generated on the first start, kept in the `posturermm-data` volume | Encrypts stored TOTP secrets and agents' trust re-anchor keys, and peppers MFA backup-code hashes. Deliberately independent of `JWT_SECRET`, so rotating the session key does not brick stored 2FA enrollments. Set it only to rotate or to supply your own. |
 | `POSTURERMM_AUTH__REMOTE_SESSION_REAUTH_INTERVAL_SECS` | `20` | How often an **already-open** remote session — terminal, RDP, screen share, file transfer, live script output — re-checks that the operator driving it is still authorized. Deactivating a user also tears their live sessions down immediately, so this is the worst-case window for a session that raced that sweep, and the mechanism behind revocations with no push door: deletion, demotion, organization deactivation. Costs one indexed lookup per live socket per tick. |
-| `POSTURERMM_CREDENTIAL_KEY` | unset | Encrypts stored credentials at rest — the ones saved for network scans and remote access — and signs evidence exports. Exactly 64 hexadecimal characters: `openssl rand -hex 32`. Unset, storing credentials stays switched off and evidence signing is unavailable. |
+| `POSTURERMM_CREDENTIAL_KEY` | unset | Stored credentials (the ones saved for network scans and remote access) work out of the box: they are encrypted under a key derived from `totp-secret` in the `posturermm-data` volume. Set this only if an earlier release had you set it: when present it is still used, and the log says so. Exactly 64 hexadecimal characters. |
 | `LOG_LEVEL` | `info` | Server log level: `trace`, `debug`, `info`, `warn` or `error`. |
 | `RUST_LOG` | `info` | Bastion log level. Takes a level, or per-module directives such as `info,posturermm_bastion=debug`. |
 
-Adding `POSTURERMM_CREDENTIAL_KEY` later is fine and switches the features on. Changing it after
-credentials are stored makes those credentials unreadable. A malformed value does **not** stop the
-server: it logs a warning and leaves both features switched off, so check the startup log after
-setting it rather than assuming a clean boot means it was accepted.
+Do not add or change `POSTURERMM_CREDENTIAL_KEY` once credentials are stored: values are sealed
+under whichever key was in use, and nothing re-seals them, so they become unreadable. A malformed
+value does **not** stop the server: it logs a warning and leaves stored credentials
+switched off, so check the startup log after setting it.
 
 ## Source address in the audit log
 
