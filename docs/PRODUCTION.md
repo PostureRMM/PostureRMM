@@ -5,9 +5,7 @@ Each release publishes it there — deploy/release/check-public-docs.sh. -->
 
 [quickstart.md](quickstart.md) installs the stack and
 [configuration.md](configuration.md) is the settings reference. This is the
-runbook for what comes after: a Bastion in a DMZ, the segment proxy, agent
-rollout, TLS and agent trust, upgrades, metrics, retention, audit forwarding,
-backup and restore.
+runbook for what comes after.
 
 ## Architecture
 
@@ -677,8 +675,8 @@ the same controls as production credentials.
 |---|---|---|
 | `posturermm.sql` | The portable backup of `posturermm-db-data`: users, endpoints, configuration, audit history, and all other relational state | The application data is gone. A raw copy of the live PostgreSQL volume is not a substitute for `pg_dump`. |
 | `posturermm-tls.tar.gz` | `posturermm-tls`: the internal CA and key, leaf certificate and key, and auto-generation sentinel | Every agent pinned to the old leaf/CA rejects the replacement certificate and stops connecting. |
-| `posturermm-data.tar.gz` | `posturermm-data`: the auto-provisioned `jwt-secret`, `totp-secret`, and other backend-persisted secret material | Existing access tokens no longer validate. More importantly, stored TOTP secrets cannot be decrypted and MFA backup-code hashes no longer verify, locking 2FA users out. Agents cannot re-anchor to a new CA until each checks in again, so losing this with `posturermm-tls` strands them. |
-| `.env` | `POSTGRES_PASSWORD` and any operator-supplied `JWT_SECRET` or `POSTURERMM_CREDENTIAL_KEY` | PostgreSQL credentials no longer match, explicitly supplied JWT keys rotate, and stored credentials/evidence-signing keys encrypted under the credential key become unusable. Neither value is in `pg_dump`. |
+| `posturermm-data.tar.gz` | `posturermm-data`: the auto-provisioned `jwt-secret`, `totp-secret`, and other backend-persisted secret material | Existing access tokens no longer validate. More importantly, stored TOTP secrets cannot be decrypted and MFA backup-code hashes no longer verify, locking 2FA users out. `totp-secret` also seals stored credentials, the SSO client secret, the license bearer token and the audit-forwarding and notification-channel secrets (lose it and you re-enter them), and the escrowed BitLocker recovery keys and local-administrator passwords: without it every escrowed value is unreadable, and nothing re-sends one. Agents cannot re-anchor to a new CA until each checks in again, so losing this with `posturermm-tls` strands them. |
+| `.env` | `POSTGRES_PASSWORD` and any operator-supplied `JWT_SECRET` or `POSTURERMM_CREDENTIAL_KEY` | PostgreSQL credentials no longer match, explicitly supplied JWT keys rotate, and, where `POSTURERMM_CREDENTIAL_KEY` is set, the stored credentials sealed under it become unusable. None of these is in `pg_dump`. |
 
 Four volumes are deliberately excluded; none holds authoritative data. Three are
 caches: `posturermm-bastion-data`, `posturermm-binary-store` (refetchable
@@ -764,6 +762,7 @@ Then confirm an enrolled agent checks in without a reinstall.
 - **Backend not serving HTTPS:** verify the `posturermm-tls` volume is mounted and `server.crt` / `server.key` exist.
 - **UI loads blank / 404:** the backend is not serving traffic yet.
 - **Agent can't connect:** verify DNS resolution, port 443 reachable, cert valid. `POSTURERMM_SERVER__PUBLIC_URL` must match what the agent sees.
+- **Upgrades of one Windows endpoint fail with `predates signed release statements`:** re-run the [install one-liner](#agent-rollout) on it; it upgrades in place.
 - **Bastion returning 401 to the backend:** the bearer secret disagrees. Both sides must hold the same 32+ character `POSTURERMM_BASTION__SECRET` (or, unset on the Bastion, the file at `[bastion] secret_path`).
 - **Bastion returning 502 on feed pulls:** it could not reach the feed origin. Check egress from the DMZ host to `[feed] api_url` (default `https://feed.posturermm.com`) and `docker compose logs bastion`.
 - **Lost the admin password:** `/app/data/bootstrap-admin-password` is one-time — once changed, the next restart overwrites it with a note saying so. Reset from the Docker host:
