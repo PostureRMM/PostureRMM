@@ -4,7 +4,7 @@
 
 **Endpoint management, security and compliance in one self-hosted platform.**
 
-Manage, patch, deploy, remote into, harden, audit and remediate your Windows fleet —
+Manage, patch, deploy, remote into, harden, audit and remediate your Windows endpoints and Linux servers —
 from one console, on your own hardware, with your fleet data never leaving it.
 
 **Free forever up to 50 endpoints. Every feature. No asterisks.**
@@ -25,12 +25,12 @@ rather than reporting the API call as a success.
 
 | Area | Capabilities |
 |---|---|
-| **Compliance** | Audit against DISA STIG, Microsoft Security Baselines and a curated hardening profile. Failing checks carry authored fixes that apply per-endpoint, per-check across the fleet, or as "apply all safe fixes" — behind a safety gate that refuses anything which would cut your own access. Every fix is verified by re-running the check, and every fix is revertible, because each executor captures the state it overwrote. |
-| **Patching** | Windows updates scanned **offline** against Microsoft's own applicability engine — no internet needed on the endpoint or the server. Third-party app updates from a curated catalogue. CVE correlation across NVD, EPSS, MSRC, CISA KEV and GHSA with version-range-aware matching. Deployment policies with canary pauses, maintenance windows and an optional supply-chain bake period. |
-| **Software** | Curated app catalogue with one-click install and uninstall, custom `.msi`/`.exe`/`.msix` upload, registry-verified installs with exit-code classification and tiered retry, full software inventory, and an application blocklist for rival agents and unapproved remote-access tools. |
-| **Remote access** | Browser-based remote desktop, a real terminal, file browse/upload/download, and PowerShell execution with an approval workflow and live output — no separate tool, no separate agent. |
-| **Fleet** | Rule-based dynamic groups, ARP network discovery for unmanaged devices, hardware and disk-health inventory, per-endpoint reachability history, maintenance windows, reboot policies with end-user deferral, and alerting over webhook and email with delivery health you can see. |
-| **Access & audit** | OIDC single sign-on — free, in every tier — five-role RBAC with group scoping, TOTP 2FA, scoped API keys, a permanent audit trail, multi-tenant data model, and a read-only "view as" lens so you can check RBAC is what you think it is. |
+| **Compliance** | Audit Windows and Linux servers against DISA STIG, Microsoft Security Baselines and a curated hardening profile. Failing checks carry authored fixes that apply per-endpoint, per-check across the fleet, or as "apply all safe fixes" — behind a safety gate that refuses anything which would cut your own access. Every fix is verified by re-running the check, and every fix is revertible, because each executor captures the state it overwrote. |
+| **Patching** | Windows updates scanned **offline** against Microsoft's own applicability engine — no internet needed on the endpoint or the server. Linux package updates from the distribution's own advisories, installed from packages your own server carries. Third-party app updates from a curated catalogue. CVE correlation across NVD, EPSS, MSRC, CISA KEV and GHSA with version-range-aware matching. Deployment policies with canary pauses, maintenance windows and an optional supply-chain bake period. |
+| **Software** | Curated app catalogue with one-click install and uninstall, custom `.msi`/`.exe`/`.msix` upload, registry-verified installs with exit-code classification and tiered retry, full software inventory on Windows and Linux, and an application blocklist for rival agents and unapproved remote-access tools. |
+| **Remote access** | Browser-based remote desktop (Windows), a real terminal, file browse/upload/download, and PowerShell, `sh` or `bash` execution with an approval workflow and live output — no separate tool, no separate agent. |
+| **Fleet** | Rule-based dynamic groups, ARP network discovery for unmanaged devices, hardware and disk-health inventory, per-endpoint reachability history, maintenance windows, reboot policies with end-user deferral, alerting over webhook and email with delivery health you can see, and custom monitors that run on the agent and alert through the same channels. |
+| **Access & audit** | OIDC single sign-on — free, in every tier — five-role RBAC with group scoping, TOTP 2FA, scoped API keys, an audit trail you can forward off-host over TLS syslog, escrowed BitLocker recovery keys and local administrator passwords, a multi-tenant data model, and a read-only "view as" lens so you can check RBAC is what you think it is. |
 
 ## The Posture Score
 
@@ -48,18 +48,23 @@ guess dressed up as a number. An empty fleet reads "not yet established", not ze
 
 ## What's in the box
 
-**2,850 atomic compliance checks** across ten platforms, imported from upstream DISA SCAP/XCCDF and
-the Microsoft Security Compliance Toolkit by dedicated importers — not hand-transcribed:
+**4,270 atomic compliance checks** across seventeen platforms, imported from upstream DISA SCAP/XCCDF,
+the Microsoft Security Compliance Toolkit and ComplianceAsCode by dedicated importers — not
+hand-transcribed — alongside PostureRMM's own curated hardening checks:
 
 | Platform | Checks |
 |---|---|
-| Windows 11 · 10 | 577 · 496 |
-| Windows Server 2022 · 2019 · 2016 · 2025 | 443 · 384 · 329 · 286 |
-| Microsoft 365 Apps · Edge · Chrome · Firefox | 201 · 73 · 38 · 23 |
+| Windows 11 · 10 | 573 · 515 |
+| Windows Server 2022 · 2019 · 2016 · 2025 | 458 · 453 · 338 · 494 |
+| Microsoft 365 Apps · Edge · Chrome · Firefox · Acrobat Reader | 202 · 79 · 39 · 26 · 2 |
+| Ubuntu 22.04 · 24.04 | 103 · 103 |
+| Debian 12 · 13 | 208 · 208 |
+| RHEL 9 · 10 (and Rocky, AlmaLinux) | 249 · 220 |
 
-Plus **nine mandate crosswalks** — HIPAA, PCI DSS v4, SOC 2 CC, ISO 27001 Annex A, CMMC L1 and L2,
-Cyber Essentials, cyber-insurance questionnaires and customer security questionnaires — mapping
-regulatory controls back to the checks that answer them.
+Plus **seven mandate crosswalks** — HIPAA, PCI DSS v4, SOC 2 CC, ISO 27001 Annex A, CMMC L1 and L2,
+and Cyber Essentials — mapping regulatory controls back to the checks that answer them, and the ACSC
+Essential Eight as a coverage lens on Windows that reports what is measured and never claims a
+maturity level.
 
 Checks are YAML, not code. So is every posture rule. You can read them, and so can your auditor.
 
@@ -107,7 +112,7 @@ from us**, and cannot be reached by us at all.
 │   Backend (Rust) ── TLS edge, API, admin UI, scheduler      │
 │      │              zero outbound internet                  │
 │      ├── PostgreSQL                                         │
-│      └── Agents (Rust) ── Windows service, no runtime deps  │
+│      └── Agents (Rust) ── Windows or Linux, no runtime deps │
 └─────────────────────────────────────────────────────────────┘
 ```
 
