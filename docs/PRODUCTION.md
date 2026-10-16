@@ -3,9 +3,9 @@
 <!-- Mirrored verbatim to PostureRMM/PostureRMM; never edit on the hub.
 Each release publishes it there — deploy/release/check-public-docs.sh. -->
 
-[quickstart.md](quickstart.md) installs the stack and
-[configuration.md](configuration.md) is the settings reference. This is the
-runbook for what comes after.
+[quickstart.md](quickstart.md) installs the stack,
+[configuration.md](configuration.md) lists settings and
+[sso.md](sso.md) sets up single sign-on. The rest is the runbook.
 
 ## Architecture
 
@@ -85,9 +85,9 @@ settings are required:
 1. **`POSTURERMM_SERVER__TRUSTED_PROXIES` = your terminator's address.** Skip
    it and every request resolves to the proxy: each audit row records the proxy
    rather than the actor, and ten failed logins from anywhere return 429 to every
-   user. Both failures are silent; the backend warns once when a forwarding
-   header arrives from an untrusted address, and that line means this setting is
-   missing.
+   user, and enrollment lockouts too. The backend warns once when
+   a forwarding header arrives from an untrusted address, and that line means this
+   setting is missing.
 2. **`Strict-Transport-Security` is your terminator's to send.** The backend
    sends HSTS only when it terminates TLS itself.
 3. **Forward `Host` unchanged** (nginx: `proxy_set_header Host $host;`).
@@ -258,6 +258,10 @@ For SCCM / Intune / GPO flows, take the MSI URL and checksum from Admin UI →
 Endpoints → Install agent → More install options, pass `SERVERURL` on the
 `msiexec` command line, and drop `install-key.txt` beside the MSI.
 
+**The install key travels in the URL's query string** (`?key=`), the only place
+the one-line installers can take it, so a reverse proxy
+may log it. Revoke the key when the rollout ends.
+
 ### Linux endpoints
 
 Debian 12/13, Ubuntu 22.04/24.04 LTS, RHEL, Rocky Linux and AlmaLinux 9/10, on
@@ -273,11 +277,7 @@ It is the same plain-HTTP bootstrap as Windows, with its
 [trust caveat](#tls-and-agent-trust). The script refuses an unsupported host,
 checks the package's SHA-256, writes `/etc/posturermm/agent.conf` (mode 0600) and
 the install key, and installs the `.deb` or `.rpm`, which starts
-`posturermm-agent.service`. Re-run over the same version, it re-writes the
-server settings and restarts the agent.
-
-The console offers the command once both packages are on the server, from the
-product feed or offline bundle.
+`posturermm-agent.service`.
 
 | Path | Holds |
 |---|---|
@@ -604,7 +604,7 @@ waited and nothing has been sent for 30 minutes.
 - [x] The backend makes zero outbound internet connections — the Bastion is the only internet-facing component
 - [x] JWT signing secret auto-provisioned to `posturermm-data` volume (or externally supplied via `JWT_SECRET`, 32+ chars)
 - [x] Keyless enrollment waits in the approval queue; install keys are the opt-in unattended lane
-- [x] 2FA enforced for admin accounts (Settings → Security → Enforce 2FA)
+- [x] TOTP 2FA mandatory for every password sign-in (SSO: the IdP's MFA)
 - [x] Audit-log source IP is trustworthy: forwarding headers are believed only from a peer named in `POSTURERMM_SERVER__TRUSTED_PROXIES` — a client cannot forge its own address into the trail
 - [x] Signing out revokes the session's refresh token server-side and records a `logout` event
 
@@ -675,7 +675,7 @@ the same controls as production credentials.
 |---|---|---|
 | `posturermm.sql` | The portable backup of `posturermm-db-data`: users, endpoints, configuration, audit history, and all other relational state | The application data is gone. A raw copy of the live PostgreSQL volume is not a substitute for `pg_dump`. |
 | `posturermm-tls.tar.gz` | `posturermm-tls`: the internal CA and key, leaf certificate and key, and auto-generation sentinel | Every agent pinned to the old leaf/CA rejects the replacement certificate and stops connecting. |
-| `posturermm-data.tar.gz` | `posturermm-data`: the auto-provisioned `jwt-secret`, `totp-secret`, and other backend-persisted secret material | Existing access tokens no longer validate. More importantly, stored TOTP secrets cannot be decrypted and MFA backup-code hashes no longer verify, locking 2FA users out. `totp-secret` also seals stored credentials, the SSO client secret, the license bearer token and the audit-forwarding and notification-channel secrets (lose it and you re-enter them), and the escrowed BitLocker recovery keys and local-administrator passwords: without it every escrowed value is unreadable, and nothing re-sends one. Agents cannot re-anchor to a new CA until each checks in again, so losing this with `posturermm-tls` strands them. |
+| `posturermm-data.tar.gz` | `posturermm-data`: the auto-provisioned `jwt-secret`, `totp-secret`, and other backend-persisted secret material | Existing access tokens no longer validate. More importantly, stored TOTP secrets cannot be decrypted and MFA backup-code hashes no longer verify, locking 2FA users out. `totp-secret` also seals stored credentials, the SSO client secret, the license bearer token and the audit-forwarding, notification-channel and PSA-connection secrets (lose it and you re-enter them), and the escrowed BitLocker recovery keys and local-administrator passwords: without it every escrowed value is unreadable, and nothing re-sends one. Agents cannot re-anchor to a new CA until each checks in again, so losing this with `posturermm-tls` strands them. |
 | `.env` | `POSTGRES_PASSWORD` and any operator-supplied `JWT_SECRET` or `POSTURERMM_CREDENTIAL_KEY` | PostgreSQL credentials no longer match, explicitly supplied JWT keys rotate, and, where `POSTURERMM_CREDENTIAL_KEY` is set, the stored credentials sealed under it become unusable. None of these is in `pg_dump`. |
 
 Four volumes are deliberately excluded; none holds authoritative data. Three are
