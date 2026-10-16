@@ -117,6 +117,17 @@ entry records the proxy instead of the client. That mistake is wrong but visible
 believing a header from an address that is not a proxy, is invisible, which is why it is not the
 default.
 
+## API key request limit
+
+Each API key may make **600 requests per minute**; request 601 inside the window gets `429 Too Many
+Requests` with a `Retry-After` header giving the seconds until a slot opens. The limit is per key,
+so one runaway script does not slow another key or a signed-in user. There is no setting for it. The
+count is held in the server's memory: restarting the server resets every key's count.
+
+API keys work only in the `Authorization: Bearer` header; a key sent as the session cookie is
+refused. Every API call a key makes that changes something is written to the audit log with the
+method, the path and the key's first seven characters. Reads are not logged.
+
 ## Where the images come from
 
 The images come from one public namespace — `ghcr.io/posturermm` — which needs no `docker login`.
