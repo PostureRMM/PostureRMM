@@ -3,7 +3,7 @@
   "info": {
     "title": "PostureRMM Integration API",
     "description": "Access to a PostureRMM install, for scripts and integrations: reads, and the writes that pass the same server-side gates as the web UI.\n\nWithin v1 a release may only add: an operation, an optional input, a response field or an enum value. Clients ignore fields they do not know and treat an enum value they do not know as unknown. Lists answer in a `{data, pagination}` envelope; `page` is 1-indexed and `per_page` is clamped to 1-100. Every error is `{error, message, details?}`.",
-    "version": "1.18.0"
+    "version": "1.19.0"
   },
   "paths": {
     "/api/v1/admin/catalog-verification": {
