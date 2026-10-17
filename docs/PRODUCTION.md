@@ -41,9 +41,8 @@ your first endpoint enrolls — a fresh install must work offline on a LAN with
 no domain.
 
 Agents do *not* use the system root store on a default install. The install
-script stamps the CA's SHA-256 fingerprint into the agent, which then does real
-chain, validity and hostname checking against a trust anchor of exactly one
-certificate.
+script stamps the CA's SHA-256 fingerprint into the agent, which then checks
+chain, validity and hostname against a trust anchor of exactly one certificate.
 
 Two consequences worth knowing before you operate this:
 
@@ -56,24 +55,23 @@ Two consequences worth knowing before you operate this:
   transport at that moment and recover on their own: after a few failed
   check-ins each asks the `:80` bootstrap listener for the current authority and
   adopts it **only** if the server can prove it knows that endpoint's own
-  enrollment secret. Expect the fleet to reconverge within minutes.
+  enrollment secret; the fleet reconverges within minutes.
 
-  Losing both files is survivable for agents; browsers, OS trust stores and
-  external tooling that trusted the old CA by hand are what you lose. Both files
-  stay in the backup set.
+  Losing both files costs agents nothing; what you lose is any browser, trust
+  store or tool that trusted the old CA by hand. Back both files up.
 
 **The pin is delivered over plain HTTP.** Port 80 serves `/install.ps1`
-deliberately: PowerShell 5.1 on a fresh Windows Server 2016 cannot complete an
-HTTPS fetch. Enrollment therefore roots in one unauthenticated fetch on your LAN;
-pinning narrows that trust-on-first-contact window to a single request. Across a
-network you do not control, distribute the bootstrap through a trusted
-software-management channel and use a real certificate. The approval queue gates
-admission.
+deliberately: with a self-signed certificate a fresh endpoint cannot validate
+an HTTPS fetch. Enrollment roots in one unauthenticated fetch on your LAN, which
+pinning narrows to a single request; the approval queue gates admission.
+**With a real certificate** the install screens lead with the `https://`
+one-liner, so no one on the path can rewrite a SYSTEM script, and a
+labelled `http://` form below it serves Windows Server 2016, whose PowerShell
+cannot complete the HTTPS fetch.
 
 [configuration.md](configuration.md) covers bringing your own certificate. If your
 *edge* (a reverse proxy, a tunnel) terminates TLS with a certificate the backend
-never generated, set `POSTURERMM_SERVER__AGENT_TRUST_MODE=system_roots`
-explicitly.
+never generated, set `POSTURERMM_SERVER__AGENT_TRUST_MODE=system_roots`.
 
 ## Fronting the backend with your own proxy
 
@@ -233,9 +231,8 @@ the UI.
 ## Agent rollout
 
 1. **Create an install key** — Admin UI → Settings → Enrollment → Create key.
-   The key is optional and only skips the approval queue, which unattended
-   rollouts need; without it the one-liner still enrolls, inert, until you admit
-   the endpoint from Endpoints.
+   The key is optional and only skips the approval queue; without it the
+   one-liner still enrolls, inert, until you admit the endpoint from Endpoints.
    `POSTURERMM_SERVER__ALLOW_AUTO_ENROLLMENT=true` admits keyless enrollments
    instantly: a trusted-LAN convenience, an open door on anything
    internet-reachable.
@@ -244,9 +241,8 @@ the UI.
    irm "http://posturermm.example.com/install.ps1?key=..." | iex
    ```
    The shim writes `C:\ProgramData\PostureRMM\install-key.txt`, downloads the
-   MSI, and runs `msiexec /i /qn SERVERURL=https://posturermm.example.com`. The
-   MSI registers and starts the agent service; the agent reads the key file on
-   first boot, enrolls, and self-cleans it.
+   MSI and runs `msiexec /i /qn SERVERURL=https://posturermm.example.com`; the
+   agent reads the key file on first boot, enrolls, and self-cleans it.
 
 **Where the MSI on the server comes from.** You never place it. An **offline
 install** gets it from the bundle; an **online install** from the product feed on
@@ -273,7 +269,7 @@ wget -qO- "http://posturermm.example.com/install-agent.sh?key=..." | sudo sh   #
 curl -fsSL http://posturermm.example.com/install-agent.sh | sudo sh            # keyless
 ```
 
-It is the same plain-HTTP bootstrap as Windows, with its
+It follows Windows' scheme rule without the Server 2016 fallback, with the same
 [trust caveat](#tls-and-agent-trust). The script refuses an unsupported host,
 checks the package's SHA-256, writes `/etc/posturermm/agent.conf` (mode 0600) and
 the install key, and installs the `.deb` or `.rpm`, which starts
