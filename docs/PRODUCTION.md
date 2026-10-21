@@ -12,7 +12,7 @@ Each release publishes it there — deploy/release/check-public-docs.sh. -->
 ```
 Browser / Agent → HTTPS/443 → backend → db:5432
                                 (terminates TLS and serves /api, /health,
-                                 /install, /downloads, /winget, and the
+                                 /install, /downloads, /winget, /repo, and the
                                  MiniJinja + HTMX admin UI at /)
 HTTP bootstrap → HTTP/80 ───────┘
 
@@ -169,9 +169,9 @@ a named authentication error.
 
 A proxy is optional and exists for **segmented networks**: agents that cannot
 reach the backend directly point at a proxy in their own segment, which relays
-for them, caches downloads, and queues writes durably while the backend is
-unreachable. It ships as the release download `docker-compose.proxy.yml`, also in
-the offline bundle with its image.
+for them and caches downloads. Old buffer settings and volumes are inert. It
+ships as the release download `docker-compose.proxy.yml`, also in the offline
+bundle with its image.
 
 ### Registering it
 
