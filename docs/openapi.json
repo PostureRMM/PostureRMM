@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "PostureRMM Integration API",
-    "description": "Access to a PostureRMM install, for scripts and integrations: reads, and the writes that pass the same server-side gates as the web UI.\n\nWithin v1 a release may only add: an operation, an optional input, a response field or an enum value. Clients ignore fields they do not know and treat an enum value they do not know as unknown. Lists answer in a `{data, pagination}` envelope; `page` is 1-indexed and `per_page` is clamped to 1-100. Every error is `{error, message, details?}`.",
-    "version": "1.22.1"
+    "description": "Access to a PostureRMM install, for scripts and integrations: reads, and the writes that pass the same server-side gates as the web UI.\n\nWithin v1 a release may only add: an operation, an optional input, a response field or an enum value. Clients ignore fields they do not know and treat an enum value they do not know as unknown. Lists answer in a `{data, pagination}` envelope; `page` is 1-indexed and `per_page` is clamped to 1-100. The fleet-wide lists (`GET /compliance-results`, `GET /vulnerabilities`) page by `cursor` instead: pass `pagination.next_cursor` back until it is `null`; `per_page` is 1-1000 and there is no total. Every error is `{error, message, details?}`.",
+    "version": "1.23.0"
   },
   "paths": {
     "/api/v1/admin/catalog-verification": {
@@ -2884,6 +2884,138 @@
           },
           "404": {
             "description": "The named resource does not exist in the caller's Organization.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The key's request budget is spent. `Retry-After` carries the seconds.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "format": "int64",
+                  "minimum": 0
+                },
+                "description": "Seconds to wait"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/compliance-results": {
+      "get": {
+        "tags": [
+          "compliance"
+        ],
+        "summary": "List the compliance results of every endpoint you may read.",
+        "description": "One row per endpoint and check, ordered by `endpoint_id` then `check_id`, so\nthe order does not change between calls. The page is cursor-based: pass each\nreply's `pagination.next_cursor` as `cursor` until it is `null`. Rows\nwritten between calls never repeat or skip a row already passed. A reply\ncarries no total: counting is what makes offset paging slow on a large\nfleet.\n\nThe rows are the ones the Compliance report and the Prevention rule drawer\ncount: active endpoints of your Organization, inside your groups, for checks\nan active profile includes.",
+        "operationId": "list_fleet_compliance_results",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "`pagination.next_cursor` of the previous page. Omit it for the first page.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "description": "Rows per page, clamped to 1-1000.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 100,
+              "maximum": 1000,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Only results with this status.",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/CheckStatusWire"
+              }
+            }
+          },
+          {
+            "name": "severity",
+            "in": "query",
+            "description": "Only results of checks with this severity.",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/SeverityWire"
+              }
+            }
+          },
+          {
+            "name": "check",
+            "in": "query",
+            "description": "Only results of this check, by its `PRC-…` code.",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of the fleet's compliance results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CursorResponse_FleetComplianceResultItem"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A path or query parameter does not parse.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No credential, or one that is expired or revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key's role or group scope does not allow this read.",
             "content": {
               "application/json": {
                 "schema": {
@@ -15471,6 +15603,135 @@
           }
         }
       }
+    },
+    "/api/v1/vulnerabilities": {
+      "get": {
+        "tags": [
+          "vulnerabilities"
+        ],
+        "summary": "List the open vulnerability findings of every endpoint you may read.",
+        "description": "One row per endpoint, CVE and package, ordered by `endpoint_id` then `id`, so\nthe order does not change between calls. The page is cursor-based: pass each\nreply's `pagination.next_cursor` as `cursor` until it is `null`. Findings\nraised between calls never repeat or skip a row already passed. A reply\ncarries no total: counting is what makes offset paging slow on a large fleet.\n\nThe rows are the ones the Vulnerability report lists: open findings on active\nendpoints of your Organization, inside your groups. For one endpoint, with\nevery status, use `GET /api/v1/endpoints/{id}/vulnerabilities`.",
+        "operationId": "list_fleet_vulnerabilities",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "`pagination.next_cursor` of the previous page. Omit it for the first page.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "description": "Rows per page, clamped to 1-1000.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 100,
+              "maximum": 1000,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "severity",
+            "in": "query",
+            "description": "Only findings of CVEs with this severity. `none` is a real CVSS 0.0; a CVE\nthe NVD has not scored is `unscored`.",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/VulnerabilitySeverityWire"
+              }
+            }
+          },
+          {
+            "name": "kev",
+            "in": "query",
+            "description": "`true` keeps only CVEs on the CISA Known Exploited Vulnerabilities list.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "cve",
+            "in": "query",
+            "description": "Only findings of this CVE, by exact id.",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of the fleet's open findings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CursorResponse_FleetVulnerabilityItem"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A path or query parameter does not parse.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No credential, or one that is expired or revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key's role or group scope does not allow this read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The key's request budget is spent. `Retry-After` carries the seconds.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "format": "int64",
+                  "minimum": 0
+                },
+                "description": "Seconds to wait"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -18290,6 +18551,208 @@
           }
         }
       },
+      "CursorMeta": {
+        "type": "object",
+        "description": "Pagination metadata of a cursor-paged list. There is no total: counting the\nset is the cost keyset paging exists to avoid.",
+        "required": [
+          "per_page",
+          "next_cursor"
+        ],
+        "properties": {
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Pass as `cursor` to read the next page. `null` on the last page."
+          },
+          "per_page": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Rows per page as applied (clamped to 1-1000)",
+            "minimum": 0
+          }
+        }
+      },
+      "CursorResponse_FleetComplianceResultItem": {
+        "type": "object",
+        "description": "A page of a cursor-paged list.",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One compliance result, with the endpoint and check it belongs to.",
+              "required": [
+                "id",
+                "endpoint_id",
+                "hostname",
+                "check_id",
+                "prc_id",
+                "check_title",
+                "severity",
+                "status",
+                "actual_value",
+                "expected_value",
+                "message",
+                "remediation_status",
+                "last_checked"
+              ],
+              "properties": {
+                "actual_value": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "check_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "check_title": {
+                  "type": "string"
+                },
+                "endpoint_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "expected_value": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "What the check requires, in one line. `null` when it compares nothing fixed."
+                },
+                "hostname": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "last_checked": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "message": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "prc_id": {
+                  "type": "string"
+                },
+                "remediation_status": {
+                  "$ref": "#/components/schemas/RemediationStatusWire"
+                },
+                "severity": {
+                  "$ref": "#/components/schemas/SeverityWire"
+                },
+                "status": {
+                  "$ref": "#/components/schemas/CheckStatusWire"
+                }
+              }
+            },
+            "description": "The items for the current page"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/CursorMeta",
+            "description": "Where the next page starts"
+          }
+        }
+      },
+      "CursorResponse_FleetVulnerabilityItem": {
+        "type": "object",
+        "description": "A page of a cursor-paged list.",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One open finding: a CVE on an endpoint, through one installed package.",
+              "required": [
+                "id",
+                "endpoint_id",
+                "hostname",
+                "cve_id",
+                "severity",
+                "cvss_v3_score",
+                "exploit_available",
+                "cisa_kev",
+                "software_name",
+                "software_version",
+                "detected_at"
+              ],
+              "properties": {
+                "cisa_kev": {
+                  "type": "boolean"
+                },
+                "cve_id": {
+                  "type": "string"
+                },
+                "cvss_v3_score": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "format": "float"
+                },
+                "detected_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "endpoint_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "exploit_available": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "Tri-state: `true` = a source reports public exploit code, `false` = a\nsource assessed this CVE and found none, `null` = no source has spoken."
+                },
+                "hostname": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "severity": {
+                  "$ref": "#/components/schemas/VulnerabilitySeverityWire"
+                },
+                "software_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "software_version": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "description": "The items for the current page"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/CursorMeta",
+            "description": "Where the next page starts"
+          }
+        }
+      },
       "DashboardStatsResponse": {
         "type": "object",
         "description": "Fleet counts for the Organization, within the key's group scope.",
@@ -20192,6 +20655,149 @@
           "fingerprint": {
             "type": "string",
             "description": "Lowercase hex, 64 characters, no separators."
+          }
+        }
+      },
+      "FleetComplianceResultItem": {
+        "type": "object",
+        "description": "One compliance result, with the endpoint and check it belongs to.",
+        "required": [
+          "id",
+          "endpoint_id",
+          "hostname",
+          "check_id",
+          "prc_id",
+          "check_title",
+          "severity",
+          "status",
+          "actual_value",
+          "expected_value",
+          "message",
+          "remediation_status",
+          "last_checked"
+        ],
+        "properties": {
+          "actual_value": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "check_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "check_title": {
+            "type": "string"
+          },
+          "endpoint_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expected_value": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What the check requires, in one line. `null` when it compares nothing fixed."
+          },
+          "hostname": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "last_checked": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "prc_id": {
+            "type": "string"
+          },
+          "remediation_status": {
+            "$ref": "#/components/schemas/RemediationStatusWire"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/SeverityWire"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CheckStatusWire"
+          }
+        }
+      },
+      "FleetVulnerabilityItem": {
+        "type": "object",
+        "description": "One open finding: a CVE on an endpoint, through one installed package.",
+        "required": [
+          "id",
+          "endpoint_id",
+          "hostname",
+          "cve_id",
+          "severity",
+          "cvss_v3_score",
+          "exploit_available",
+          "cisa_kev",
+          "software_name",
+          "software_version",
+          "detected_at"
+        ],
+        "properties": {
+          "cisa_kev": {
+            "type": "boolean"
+          },
+          "cve_id": {
+            "type": "string"
+          },
+          "cvss_v3_score": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          },
+          "detected_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endpoint_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "exploit_available": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Tri-state: `true` = a source reports public exploit code, `false` = a\nsource assessed this CVE and found none, `null` = no source has spoken."
+          },
+          "hostname": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/VulnerabilitySeverityWire"
+          },
+          "software_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "software_version": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
