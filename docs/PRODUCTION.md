@@ -20,8 +20,8 @@ bastion → HTTPS → Feed API
 bastion → HTTP  → backend:3000 (admin API, status, sync)
 ```
 
-No separate web or reverse-proxy tier: the backend serves the JSON API and the
-admin UI. Its `:80` listener redirects to HTTPS except for the plaintext
+There is no separate web tier. The backend's `:80` listener redirects to HTTPS
+except for the plaintext
 `/install.ps1`, `/install-agent.sh` and `/downloads/*` bootstrap paths, and its
 `:3000` plane is never published. Only the Bastion talks to the internet.
 
@@ -47,8 +47,7 @@ chain, validity and hostname against a trust anchor of exactly one certificate.
 Two consequences worth knowing before you operate this:
 
 - **Rotating the leaf is safe.** Changing `POSTURERMM_DOMAIN` re-mints only the
-  leaf; the CA is persisted and reused, so enrolled agents keep working with no
-  action on the endpoints.
+  leaf; the CA is persisted and reused, so enrolled agents keep working.
 - **Replacing the CA is a fleet event, but not a manual one.** It happens on
   first boot, and otherwise only when you remove `ca.crt` + `ca.key` or move
   between a public certificate and a private one. Enrolled agents lose their
@@ -57,8 +56,8 @@ Two consequences worth knowing before you operate this:
   adopts it **only** if the server can prove it knows that endpoint's own
   enrollment secret; the fleet reconverges within minutes.
 
-  Losing both files costs agents nothing; what you lose is any browser, trust
-  store or tool that trusted the old CA by hand. Back both files up.
+  Losing both files costs agents nothing; you lose what trusted the old CA
+  by hand (browsers, trust stores, tools). Back both files up.
 
 **The pin is delivered over plain HTTP.** Port 80 serves `/install.ps1`
 deliberately: with a self-signed certificate a fresh endpoint cannot validate
@@ -98,8 +97,7 @@ the agent, not the relay.
 ## Bastion in a DMZ
 
 By default the Bastion runs beside the backend at `http://bastion:8300`, sharing
-a bearer secret the backend generates on first boot; nothing to do, offline
-installs included.
+a bearer secret the backend generates on first boot; nothing to do.
 
 For a split topology (Bastion on a DMZ host, backend/db/admin UI in the
 protected zone) the hosts cannot share that volume. Generate one secret with
@@ -107,7 +105,7 @@ protected zone) the hosts cannot share that volume. Generate one secret with
 
 1. **On the DMZ host** — take
    [`docker-compose.bastion.yml`](https://github.com/PostureRMM/PostureRMM/releases/latest/download/docker-compose.bastion.yml)
-   from the release page (that file alone), then create
+   from the release page, then create
    `.env` beside it with `POSTURERMM_VERSION`, the generated secret, and the
    deployment id from the backend's boot log — the compose refuses whichever is
    absent:
@@ -287,10 +285,10 @@ A failed upgrade rolls back to the kept package. `apt purge posturermm-agent` or
 logs; `apt remove` keeps everything.
 
 Not on Linux: the tray companion, remote desktop and tamper protection. Scripts
-run in `sh` or `bash`. Updates are the distribution packages the server carries,
-installed from the agent's private source list, never the host's repositories.
-RHEL itself, and AlmaLinux 10 on a CPU without x86-64-v3, are scanned but not
-patched.
+run in `sh` or `bash`. Updates are distribution packages the server carries,
+installed from the agent's private source list; registered RHEL uses its own
+repositories. Unregistered RHEL, and AlmaLinux 10 on a CPU without x86-64-v3,
+are scanned, not patched.
 
 ### Local endpoint policy
 
@@ -341,6 +339,10 @@ docker compose ps
 docker compose logs -f backend
 docker compose logs -f bastion
 
+# Console access log: one JSON line per console/API request (who, which route,
+# status, latency), under target "access". Route templates only, never a URL.
+docker compose logs backend | grep '"target":"access"'
+
 # Restart a single service
 docker compose restart backend
 
@@ -366,8 +368,12 @@ docker compose exec db psql -U posturermm posturermm
 ```
 
 Read the target version's release notes: a release needing a one-time manual
-step says so there, and the backend itself refuses to start, names what it needs
-and prints the recipe.
+step says so there, and the backend itself refuses to start and prints the
+recipe.
+
+**Container logs are capped** at four 25 MB files per container (`x-logging`, atop
+each compose file). A bastion or proxy host takes the cap on re-download and
+`up -d`.
 
 ### Verifying a release
 
