@@ -3,7 +3,7 @@
   "info": {
     "title": "PostureRMM Integration API",
     "description": "Access to a PostureRMM install, for scripts and integrations: reads, and the writes that pass the same server-side gates as the web UI.\n\nWithin v1 a release may only add: an operation, an optional input, a response field or an enum value. Clients ignore fields they do not know and treat an enum value they do not know as unknown. Lists answer in a `{data, pagination}` envelope; `page` is 1-indexed and `per_page` is clamped to 1-100. The fleet-wide lists (`GET /compliance-results`, `GET /vulnerabilities`) page by `cursor` instead: pass `pagination.next_cursor` back until it is `null`; `per_page` is 1-1000 and there is no total. Every error is `{error, message, details?}`.",
-    "version": "1.25.0"
+    "version": "1.26.0"
   },
   "paths": {
     "/api/v1/admin/catalog-verification": {
@@ -340,86 +340,13 @@
         }
       }
     },
-    "/api/v1/admin/feed/status": {
-      "get": {
-        "tags": [
-          "feed"
-        ],
-        "summary": "The acting Organization's feed import record.",
-        "description": "Admin or super admin. **Deprecated:** nothing records an import since the\nbundle upload was removed (#2681), so on a current install this answers\n`has_imports: false`. Read `GET /api/v1/admin/feed/reconciliation-log` for what\nthe feed last changed.",
-        "operationId": "get_feed_status",
-        "responses": {
-          "200": {
-            "description": "The import record",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FeedStatusResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "A path or query parameter does not parse.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No credential, or one that is expired or revoked.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The key's role or group scope does not allow this read.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "The key's request budget is spent. `Retry-After` carries the seconds.",
-            "headers": {
-              "Retry-After": {
-                "schema": {
-                  "type": "integer",
-                  "format": "int64",
-                  "minimum": 0
-                },
-                "description": "Seconds to wait"
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          }
-        },
-        "deprecated": true
-      }
-    },
     "/api/v1/admin/feed/sync-now": {
       "post": {
         "tags": [
           "feed"
         ],
         "summary": "Pull the feed now, outside the hourly schedule.",
-        "description": "Super admin only: the pull writes every shared feed table, for every\nOrganization (ADR-0072). It answers 202 with no body, and the sync runs\ndetached in this server process. It is not queued durably: a restart before it\nfinishes drops it (the next scheduled pull runs regardless), and its outcome is\nnot returned, only logged and shown on Settings, Bastion. A large backlog takes\nminutes, which is why the request does not wait. Answers 503 when the server's\nfeed puller is not running.",
+        "description": "Super admin only: the pull writes every shared feed table, for every\nOrganization (ADR-0072). It answers 202 with no body, and the sync runs\ndetached in this server process. It is not queued durably: a restart before it\nfinishes drops it (the next scheduled pull runs regardless), and its outcome is\nnot returned, only logged and shown on Settings, Bastion. A large backlog takes\nminutes, which is why the request does not wait. Answers 409 when a pull is\nalready running (the hourly one, or an earlier Sync Now), and 503 when the\nserver's feed puller is not running.",
         "operationId": "sync_feed_now",
         "responses": {
           "202": {
@@ -447,6 +374,16 @@
           },
           "403": {
             "description": "The key's role or group scope does not allow this read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A pull is already running; it will finish on its own",
             "content": {
               "application/json": {
                 "schema": {
@@ -1459,7 +1396,7 @@
           "app-catalog"
         ],
         "summary": "Whether an app is already installed on the given endpoints.",
-        "description": "Any role. Matches by CPE mapping (reliable), else by display name (fuzzy).\nOnly the calling Organization's endpoints inside the caller's group read scope\nanswer; any other id is left out, as if it did not exist.",
+        "description": "Any role. An install counts when `endpoint_app_state` links it to this entry:\nthe CPE mapping first, then the name arms narrowed by the line-version guard\n(ADR-0179). An install that guard leaves unidentified is not this entry's.\nOnly the calling Organization's endpoints inside the caller's group read scope\nanswer; any other id is left out, as if it did not exist.",
         "operationId": "install_status",
         "parameters": [
           {
@@ -2884,6 +2821,120 @@
           },
           "404": {
             "description": "The named resource does not exist in the caller's Organization.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The key's request budget is spent. `Retry-After` carries the seconds.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "format": "int64",
+                  "minimum": 0
+                },
+                "description": "Seconds to wait"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/changes/{id}/tasks/{task_id}/cancel": {
+      "post": {
+        "tags": [
+          "changes"
+        ],
+        "summary": "Cancel one queued task of a Change, and the rest of its own chain lane.",
+        "description": "Admin only. For giving up on one user's queued install without ending the\nChange: the others' tasks, and the other users' later steps, go on. `404`\nwhen the Change or the task is not in the key's Organization, or the task\nbelongs to another Change, and `403` unless every target of the Change is in\nthe key's groups. `409` when the task is no longer queued (the agent has\nstarted it, or it ended); nothing is written then.",
+        "operationId": "cancel_change_task",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Change id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "task_id",
+            "in": "path",
+            "description": "The Change's task to cancel; a task id from the Change's targets or its pending tasks",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The task was cancelled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancelChangeTaskResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A path or query parameter does not parse.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No credential, or one that is expired or revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key's role or group scope does not allow this read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The named resource does not exist in the caller's Organization.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The task is no longer pending, so it was left alone",
             "content": {
               "application/json": {
                 "schema": {
@@ -16829,6 +16880,19 @@
           }
         }
       },
+      "CancelChangeTaskResponse": {
+        "type": "object",
+        "description": "What cancelling one task of a Change did.",
+        "required": [
+          "cancelled"
+        ],
+        "properties": {
+          "cancelled": {
+            "type": "boolean",
+            "description": "Always `true`: a task that could not be cancelled answers an error."
+          }
+        }
+      },
       "CartItemRequest": {
         "allOf": [
           {
@@ -20588,58 +20652,6 @@
           }
         }
       },
-      "FeedStatusResponse": {
-        "type": "object",
-        "description": "The acting Organization's feed import record.",
-        "required": [
-          "has_imports",
-          "last_sequence",
-          "last_imported_at",
-          "last_bundle_type",
-          "last_status",
-          "total_imports"
-        ],
-        "properties": {
-          "has_imports": {
-            "type": "boolean",
-            "description": "False when no import is recorded."
-          },
-          "last_bundle_type": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Null when `has_imports` is false."
-          },
-          "last_imported_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "RFC 3339. Null when `has_imports` is false."
-          },
-          "last_sequence": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "format": "int32",
-            "description": "The latest import's sequence number. Null when `has_imports` is false."
-          },
-          "last_status": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Null when `has_imports` is false."
-          },
-          "total_imports": {
-            "type": "integer",
-            "format": "int64",
-            "description": "How many imports are recorded."
-          }
-        }
-      },
       "FingerprintResponse": {
         "type": "object",
         "description": "The SHA-256 fingerprint of the install's CA certificate.",
@@ -22789,7 +22801,8 @@
           },
           "last_seen_at": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "When the generator last changed this action's content (title, gain,\naffected count, effort, impact, auto-fix) or reopened it. An unchanged\naction keeps its value across passes, so it is not a \"still seen\" time."
           },
           "owner_user_id": {
             "type": [
@@ -23635,7 +23648,7 @@
               "object",
               "null"
             ],
-            "description": "The check-in as the agent sent it. Free-form: its keys follow the agent's\nversion and are not part of the v1 promise. Null when `received_at` is."
+            "description": "The check-in as the agent sent it, except that `performance_samples` and\n`task_results` are replaced by their lengths, `performance_samples_count`\nand `task_results_count`. Free-form: its keys follow the agent's version\nand are not part of the v1 promise. Null when `received_at` is."
           },
           "received_at": {
             "type": [
@@ -23722,7 +23735,6 @@
           "bundle_version",
           "apps_removed",
           "packages_superseded",
-          "vulns_retracted",
           "compliance_removed",
           "created_at"
         ],
@@ -23756,11 +23768,6 @@
             "type": "integer",
             "format": "int32",
             "description": "Patch packages replaced by a newer one."
-          },
-          "vulns_retracted": {
-            "type": "integer",
-            "format": "int32",
-            "description": "Vulnerabilities the feed withdrew."
           }
         }
       },
@@ -24400,12 +24407,14 @@
           "already_installed",
           "no_payload_for_target",
           "not_applicable",
-          "agent_cannot_run"
+          "agent_cannot_run",
+          "no_target_user",
+          "already_queued"
         ]
       },
       "SkippedEndpointResponse": {
         "type": "object",
-        "description": "An endpoint a dispatch did not create work for, or one endpoint and item pair\nit accounts for anyway.",
+        "description": "An endpoint a dispatch did not create work for, or one endpoint and item pair\nit created no work for.",
         "required": [
           "endpoint_id",
           "reason",
@@ -24433,6 +24442,17 @@
           },
           "reason": {
             "$ref": "#/components/schemas/SkipReasonWire"
+          },
+          "user": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SkippedUserResponse",
+                "description": "Set when the skip is about one user's session on the endpoint (a\nuser-only app) rather than the endpoint or the pair as a whole."
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       },
@@ -24519,6 +24539,26 @@
           "update_id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "SkippedUserResponse": {
+        "type": "object",
+        "description": "The user whose session a skip is about.",
+        "required": [
+          "sid"
+        ],
+        "properties": {
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "How the user is named to an operator, when known."
+          },
+          "sid": {
+            "type": "string",
+            "description": "The user's SID."
           }
         }
       },
