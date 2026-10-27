@@ -113,7 +113,7 @@ protected zone) the hosts cannot share that volume. Generate one secret with
    POSTURERMM_BASTION__SECRET=<generated-64-character-hex-value>
    POSTURERMM_FEED__DEPLOYMENT_ID=<uuid-from-the-backend-boot-log>
    docker compose -f docker-compose.bastion.yml up -d
-   docker compose -f docker-compose.bastion.yml ps   # should report bastion healthy
+   docker compose -f docker-compose.bastion.yml ps   # healthy after ~30 s
    ```
 2. **On the protected-zone host** — leave `docker-compose.yml` as-is and set
    both values in `.env`:
@@ -258,7 +258,7 @@ may log it. Revoke the key when the rollout ends.
 
 ### Linux endpoints
 
-Debian 12/13, Ubuntu 22.04/24.04 LTS, RHEL, Rocky Linux and AlmaLinux 9/10, on
+Debian 12/13, Ubuntu 22.04/24.04/26.04 LTS, RHEL, Rocky Linux and AlmaLinux 9/10, on
 x86_64 with systemd. Run the install screen's command as a user who can `sudo`:
 
 ```bash
@@ -760,7 +760,7 @@ Then confirm an enrolled agent checks in without a reinstall.
 ## Troubleshooting
 
 - **Backend won't start:** `docker compose logs backend`. Migrations log themselves on startup.
-- **502 from your own upstream proxy:** the backend container is down or not ready; `docker compose ps` should show it `healthy`.
+- **502 from your upstream proxy:** the backend is not ready; `docker compose ps` should show it `healthy` (allow 20 s).
 - **Backend not serving HTTPS:** verify the `posturermm-tls` volume is mounted and `server.crt` / `server.key` exist.
 - **UI loads blank / 404:** the backend is not serving traffic yet.
 - **Agent can't connect:** verify DNS resolution, port 443 reachable, cert valid. `POSTURERMM_SERVER__PUBLIC_URL` must match what the agent sees.
