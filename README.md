@@ -1,3 +1,6 @@
+<!-- Mirrored verbatim to PostureRMM/PostureRMM as README.md; never edit on the hub.
+Each release publishes it there (deploy/release/check-public-docs.sh). Its links resolve on the hub. -->
+
 <div align="center">
 
 <img src="./docs/brand/logo-lockup.svg" alt="PostureRMM" width="380" />
@@ -48,7 +51,7 @@ guess dressed up as a number. An empty fleet reads "not yet established", not ze
 
 ## What's in the box
 
-**4,270 atomic compliance checks** across seventeen platforms, imported from upstream DISA SCAP/XCCDF,
+**4,336 atomic compliance checks** across eighteen platforms, imported from upstream DISA SCAP/XCCDF,
 the Microsoft Security Compliance Toolkit and ComplianceAsCode by dedicated importers — not
 hand-transcribed — alongside PostureRMM's own curated hardening checks:
 
@@ -57,7 +60,7 @@ hand-transcribed — alongside PostureRMM's own curated hardening checks:
 | Windows 11 · 10 | 573 · 515 |
 | Windows Server 2022 · 2019 · 2016 · 2025 | 458 · 453 · 338 · 494 |
 | Microsoft 365 Apps · Edge · Chrome · Firefox · Acrobat Reader | 202 · 79 · 39 · 26 · 2 |
-| Ubuntu 22.04 · 24.04 | 103 · 103 |
+| Ubuntu 22.04 · 24.04 · 26.04 | 103 · 103 · 66 |
 | Debian 12 · 13 | 208 · 208 |
 | RHEL 9 · 10 (and Rocky, AlmaLinux) | 249 · 220 |
 
@@ -131,12 +134,22 @@ curl -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/prefl
 chmod +x preflight.sh && ./preflight.sh
 ```
 
-Nothing to edit — no values to choose, no certificates, no DNS. Requirements, first login and the
-air-gapped install: **[docs/quickstart.md](docs/quickstart.md)**.
+On Windows 10 or 11 with [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/),
+in PowerShell:
+
+```powershell
+mkdir posturermm; cd posturermm
+curl.exe -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/docker-compose.yml
+curl.exe -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/preflight.ps1
+powershell -ExecutionPolicy Bypass -File .\preflight.ps1
+```
+
+Nothing to edit — no values to choose, no certificates, no DNS. Requirements, Docker Desktop's
+licence, first login and the air-gapped install: **[docs/quickstart.md](docs/quickstart.md)**.
 
 ## Configuration
 
-**Every setting is optional, and a default install sets none of them.** `preflight.sh` generates
+**Every setting is optional, and a default install sets none of them.** `preflight.sh` (`preflight.ps1` on Windows) generates
 the database password and records this host's address; the server generates its session key, TLS
 certificate and bastion secret on first start.
 
@@ -157,7 +170,7 @@ separate download site.
   anything you would otherwise ask a colleague
 - [**Issues**](https://github.com/PostureRMM/PostureRMM/issues) — bugs and feature requests
 - [**Releases**](https://github.com/PostureRMM/PostureRMM/releases) — every download: the compose
-  file, the preflight script, the offline bundle, the agent installers
+  file, the preflight scripts, the offline bundle, the agent installers
 - [**Security policy**](SECURITY.md) — report a vulnerability here, never as a public issue
 
 ## License
