@@ -5,7 +5,7 @@ Each release publishes it there — deploy/release/check-public-docs.sh. -->
 
 ## Requirements
 
-A Linux host with at least 4 GB of RAM, 10 GB free and `curl`, running Docker Engine 20.10+ with
+A Linux host (Windows 10 or 11: [see below](#install-on-windows)) with at least 4 GB of RAM, 10 GB free and `curl`, running Docker Engine 20.10+ with
 Compose v2, or Podman 5+ as root. **Nothing to edit** — no values to choose, no certificates to
 obtain, no DNS.
 
@@ -23,7 +23,7 @@ provide the legacy Python v1 there, which is not supported. `preflight.sh` probe
 either is missing or too old.
 
 Windows endpoints supported: **11, 10, and Server 2016 / 2019 / 2022 / 2025.** Linux endpoints
-supported: **Debian 12/13, Ubuntu 22.04/24.04 LTS, RHEL, Rocky Linux and AlmaLinux 9/10**, on x86_64
+supported: **Debian 12/13, Ubuntu 22.04/24.04/26.04 LTS, RHEL, Rocky Linux and AlmaLinux 9/10**, on x86_64
 with systemd.
 
 ## Install
@@ -35,10 +35,35 @@ curl -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/prefl
 chmod +x preflight.sh && ./preflight.sh
 ```
 
-`preflight.sh` checks the host, generates your database password, records this host's address as
+`preflight.sh` checks the host and that ports 443 and 80 are free, generates your database password, records this host's address as
 the name agents will use to reach it, pulls the images and starts the stack. Podman runs the stack as
 root, so on a Podman host run it as `sudo ./preflight.sh`, and prefix `sudo` to the `docker`
 commands in these docs.
+
+## Install on Windows
+
+For a Windows 10 or 11 PC with [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/)
+running Linux containers (the WSL 2 default), 4 GB of RAM available to it and 10 GB free. If Docker
+Desktop reports WSL missing or out of date, run `wsl --install` (or `wsl --update`) in an administrator
+PowerShell and restart. Then, in PowerShell, no administrator prompt:
+
+```powershell
+mkdir posturermm; cd posturermm
+curl.exe -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/docker-compose.yml
+curl.exe -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/preflight.ps1
+powershell -ExecutionPolicy Bypass -File .\preflight.ps1
+```
+
+`preflight.ps1` does what `preflight.sh` does, and `-ExecutionPolicy Bypass` applies to this one run
+only; nothing machine-wide changes. If another program holds port 80 or 443 (IIS often holds 80),
+it names the program. Windows then asks whether to let Docker Desktop Backend through its firewall:
+choose Allow, or other machines cannot reach the server. Log in as below, with `docker compose`
+commands run in the same folder.
+
+Docker Desktop is free for personal use, education, non-commercial open source and businesses with
+fewer than 250 employees and under $10 million in annual revenue; larger organisations need a paid
+Docker subscription. Windows Server hosts and the air-gapped install are not supported on Windows;
+use a Linux host for those.
 
 ## First login
 
