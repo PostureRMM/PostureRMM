@@ -10,7 +10,7 @@ Each release publishes it there (deploy/release/check-public-docs.sh). Its links
 Manage, patch, deploy, remote into, harden, audit and remediate your Windows endpoints and Linux servers —
 from one console, on your own hardware, with your fleet data never leaving it.
 
-**Free forever up to 50 endpoints. Every feature. No asterisks.**
+**PostureRMM is in beta. It is free for up to 50 endpoints, with every feature. Paid plans are not available yet.**
 
 </div>
 
@@ -33,7 +33,7 @@ rather than reporting the API call as a success.
 | **Software** | Curated app catalogue with one-click install and uninstall, custom `.msi`/`.exe`/`.msix` upload, registry-verified installs with exit-code classification and tiered retry, full software inventory on Windows and Linux, and an application blocklist for rival agents and unapproved remote-access tools. |
 | **Remote access** | Browser-based remote desktop (Windows), a real terminal, file browse/upload/download, and PowerShell, `sh` or `bash` execution with an approval workflow and live output — no separate tool, no separate agent. |
 | **Fleet** | Rule-based dynamic groups, ARP network discovery for unmanaged devices, hardware and disk-health inventory, per-endpoint reachability history, maintenance windows, reboot policies with end-user deferral, alerting over webhook and email with delivery health you can see, and custom monitors that run on the agent and alert through the same channels. |
-| **Access & audit** | OIDC single sign-on — free, in every tier — five-role RBAC with group scoping, TOTP 2FA, scoped API keys, an audit trail you can forward off-host over TLS syslog, escrowed BitLocker recovery keys and local administrator passwords, a multi-tenant data model, and a read-only "view as" lens so you can check RBAC is what you think it is. |
+| **Access & audit** | OIDC single sign-on, five-role RBAC with group scoping, TOTP 2FA, scoped API keys, an audit trail you can forward off-host over TLS syslog, escrowed BitLocker recovery keys and local administrator passwords, a multi-tenant data model, and a read-only "view as" lens so you can check RBAC is what you think it is. |
 
 ## The Posture Score
 
@@ -86,12 +86,10 @@ is shut queues durably and drains the moment it opens, with no operator action a
 re-request.
 
 Almost nothing goes the other way. Your install has an opaque identifier, and it is sent with every
-feed request; each license check adds your version, tier and active endpoint count, which is what
-metering a free tier costs. Nothing about your endpoints or their contents ever leaves your server —
+feed request; each license check adds your version, tier and active endpoint count. Nothing about your endpoints or their contents ever leaves your server —
 we never learn which machines you run, what is on them, or what failed a check. There is no inbound
-path to your backend and no way for us to reach it. Community needs no activation and no licence
-token at all; Business activates once and then never needs to reach us again. The identifier is
-shown in the product, on the License & activation card, with this same sentence beside it.
+path to your backend and no way for us to reach it. No activation and no licence token are needed.
+The identifier is shown in the product with this same sentence beside it.
 
 First install and first enrollment work with the door shut too: the agent installer travels inside
 the offline bundle.
@@ -169,14 +167,14 @@ separate download site.
 - [**Discussions**](https://github.com/PostureRMM/PostureRMM/discussions) — questions, how-tos,
   anything you would otherwise ask a colleague
 - [**Issues**](https://github.com/PostureRMM/PostureRMM/issues) — bugs and feature requests
-- [**Releases**](https://github.com/PostureRMM/PostureRMM/releases) — every download: the compose
+- [**Releases**](https://github.com/PostureRMM/PostureRMM/releases) — the latest release: the compose
   file, the preflight scripts, the offline bundle, the agent installers
 - [**Security policy**](SECURITY.md) — report a vulnerability here, never as a public issue
 
 ## License
 
-Proprietary — see [LICENSE](LICENSE). Free and perpetual up to 50 endpoints, no redistribution or
-rebranding of our builds. It is short and written to be read.
+Proprietary — see [LICENSE](LICENSE). No redistribution or rebranding of our builds. It is short and
+written to be read.
 
-Free means free: not a trial, not a feature-limited edition, not "free for personal use". SSO,
+The free cap is not a trial, not a feature-limited edition, not "free for personal use". SSO,
 the full posture model, all compliance content, remote access and every report are in it.

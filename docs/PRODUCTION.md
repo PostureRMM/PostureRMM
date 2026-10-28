@@ -29,9 +29,9 @@ except for the plaintext
 
 PostureRMM is proprietary software, licensed under the
 [End-User License Agreement](../LICENSE) shipped with every release; installing
-or running it accepts those terms. Community is free and perpetual up to 50
-endpoints, and a paid entitlement raises the cap. Only builds we publish (GitHub
-Release assets and images in our GHCR namespace) are covered.
+or running it accepts those terms. PostureRMM is in beta. It is free for up to 50
+endpoints, with every feature. Paid plans are not available yet. Only builds we publish are
+covered.
 
 ## TLS and agent trust
 
