@@ -1,5 +1,5 @@
 PostureRMM End-User License Agreement
-Last updated: 2026-08-14
+Last updated: 2026-10-28
 
 Copyright (c) 2026 PostureRMM. All rights reserved.
 
@@ -10,9 +10,9 @@ would rather you read it than skim it.
 
 THE SHORT VERSION
 
-  - Run PostureRMM free, forever, on up to 50 endpoints. Every feature.
-  - Need more endpoints? Buy an entitlement. It raises the cap. Nothing else
-    about the product changes.
+  - PostureRMM is in beta. It is free for up to 50 endpoints, with every
+    feature. Paid plans are not available yet.
+  - More than 50 endpoints? That needs a written agreement with us (section 5).
   - Manage your own machines, or your customers' machines. Both are fine.
   - Don't redistribute our builds, rebrand them, or defeat the endpoint cap.
   - We give no warranty and we cap our liability. Sections 13 and 14 are the
@@ -45,13 +45,6 @@ You, your — the person or organisation running the Software.
 Endpoint — one device, physical or virtual, on which the PostureRMM agent is
 installed and enrolled against your installation.
 
-Entitlement — a signed license token we issue to a specific installation,
-recording the endpoint cap it is licensed for and the date it is paid through.
-
-Community — the Software running without an Entitlement.
-
-Business — the Software running with a valid Entitlement.
-
 Official Build — a copy of the Software that we published ourselves: a GitHub
 Release asset in the official PostureRMM repository, or a container image in a
 GitHub Container Registry namespace we control. The README in that repository
@@ -79,41 +72,26 @@ non-transferable, royalty-free license to:
       run it. We can stop publishing a version; we cannot take back the copy you
       already have.
 
-The right to run the Software is perpetual. An Entitlement does not grant that
-right — it raises the endpoint cap for the period it covers (section 5).
+The right to run a version you lawfully obtained does not expire (see (d)).
 
 
-4. COMMUNITY: FREE, UP TO 50 ENDPOINTS
+4. BETA: FREE UP TO 50 ENDPOINTS
 
-Community costs nothing and does not expire. It is the same product as Business,
-with the same features: no feature matrix, no surcharge for single sign-on, no
-asterisks. The one limit is a cap of 50 endpoints.
+PostureRMM is in beta. It is free for up to 50 endpoints, with every feature.
+Paid plans are not available yet. There is no feature matrix and no surcharge
+for single sign-on or anything else. The one limit is a cap of 50 endpoints.
 
 Endpoints beyond the cap still enrol, but they sit in a pending state — not
-scanned, not scored, not billed — until you have cap for them. The cap is
-enforced by the Software in real time. We do not audit you, and there is no
-retrospective true-up.
+scanned, not scored — until you have cap for them. The cap is enforced by the
+Software in real time. We do not audit you, and there is no retrospective
+true-up.
 
 
-5. BUSINESS: AN ENTITLEMENT RAISES THE CAP
+5. LARGER FLEETS
 
-An Entitlement raises your cap to 50 plus the number of seats you purchased. The
-first 50 endpoints stay free at any scale. Prices, billing cadence, and payment
-terms are the ones stated to you at purchase; they are deliberately not restated
-here, so that this file cannot go stale about them.
-
-Two things about how Entitlements behave, because they are promises and not
-merely mechanics:
-
-  (a) An Entitlement is valid on your installation until its paid-through date
-      plus a seven-day grace period, whether or not that installation can reach
-      the internet. Our downtime cannot degrade a paying customer, and a site
-      that opens outbound access for one maintenance window a month is a
-      first-class customer.
-
-  (b) If an Entitlement lapses, the installation degrades gracefully to
-      Community: endpoints beyond 50 move to the pending state, and the first 50
-      keep full monitoring. We do not brick installations over a billing event.
+No paid plan exists yet. To run more than 50 endpoints you need a written
+agreement with us, signed by both of us (section 16). Until you have one, the
+cap stays at 50.
 
 
 6. WHAT YOU MAY NOT DO
@@ -128,9 +106,7 @@ You may not:
       name, as your own product, or bundled into another product;
 
   (c) circumvent, disable, alter, or interfere with the endpoint cap, the
-      Entitlement verification, the tier reporting, or any other licensing
-      mechanism in the Software; or use an Entitlement that was not issued to
-      your installation;
+      usage reporting, or any other licensing mechanism in the Software;
 
   (d) remove, obscure, or alter our copyright, license, version, or attribution
       notices — in the binaries, in the container images, or in the product's
@@ -247,13 +223,10 @@ As far as the law allows:
       possible; and
 
   (b) our total liability to you for everything arising out of or relating to
-      the Software or this agreement is capped at the greater of (i) the amounts
-      you paid us for Entitlements in the twelve months before the claim arose,
-      and (ii) one hundred United States dollars. If you run Community you have
-      paid us nothing, and the cap is one hundred United States dollars.
+      the Software or this agreement is capped at one hundred United States
+      dollars.
 
-This is a deliberate allocation of risk, and it is part of why the Software
-costs what it costs: a free tier and a one-dollar-per-endpoint price cannot
+This is a deliberate allocation of risk: software we give away free cannot
 carry unbounded liability.
 
 Nothing in this agreement excludes or limits any liability that cannot lawfully
@@ -276,16 +249,13 @@ fixed — you have published our builds under another name, say — it ends when
 tell you.
 
 When it ends, stop using the Software and delete every copy you hold, including
-container images. Termination for breach does not entitle you to a refund of any
-Entitlement.
+container images.
 
 We have no remote kill switch, and this agreement does not give us one. Nothing
-here lets us reach into your installation and disable it; our only lever is
-declining to issue or renew an Entitlement. Termination is a legal event, not a
-technical one.
+here lets us reach into your installation and disable it. Termination is a
+legal event, not a technical one.
 
-Sections 2, 8, 9, 10, 13, 14, 16, and 17 survive termination, together with any
-payment obligation that had already accrued.
+Sections 2, 8, 9, 10, 13, 14, 16, and 17 survive termination.
 
 
 16. GENERAL
@@ -300,10 +270,10 @@ stays in force, and the unenforceable part is narrowed to what is enforceable.
 No waiver. If we do not enforce something immediately, we have not given it up.
 
 Entire agreement. This is the whole agreement about the Software between you and
-us, and it replaces anything said before. Where a written order form or purchase
-agreement signed by both of us conflicts with it, that document governs.
+us, and it replaces anything said before. Where a written agreement signed by both of us
+conflicts with it, that document governs.
 
-Assignment. You may not transfer this agreement or an Entitlement without our
+Assignment. You may not transfer this agreement without our
 written consent, except to a successor of your entire business. We may assign
 this agreement.
 
