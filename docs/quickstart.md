@@ -3,6 +3,8 @@
 <!-- Mirrored verbatim to PostureRMM/PostureRMM; never edit on the hub.
 Each release publishes it there — deploy/release/check-public-docs.sh. -->
 
+Already running PostureRMM? Jump to [Upgrade](#upgrade).
+
 ## Requirements
 
 A Linux host (Windows 10 or 11: [see below](#install-on-windows)) with at least 4 GB of RAM, 10 GB free and `curl`, running Docker Engine 20.10+ with
@@ -40,6 +42,8 @@ the name agents will use to reach it, pulls the images and starts the stack. Pod
 root, so on a Podman host run it as `sudo ./preflight.sh`, and prefix `sudo` to the `docker`
 commands in these docs.
 
+Running it again is safe. The 10 GB free-space check applies to a first install only, not to a re-run once the images are local.
+
 ## Install on Windows
 
 For a Windows 10 or 11 PC with [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/)
@@ -54,6 +58,9 @@ curl.exe -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/p
 powershell -ExecutionPolicy Bypass -File .\preflight.ps1
 ```
 
+Windows Server can't host the PostureRMM server: Docker Desktop runs on Windows 10 and 11 only. Run a small Linux VM in
+Hyper-V and use the Linux install above; Windows Server stays a supported endpoint.
+
 `preflight.ps1` does what `preflight.sh` does, and `-ExecutionPolicy Bypass` applies to this one run
 only; nothing machine-wide changes. If another program holds port 80 or 443 (IIS often holds 80),
 it names the program. Windows then asks whether to let Docker Desktop Backend through its firewall:
@@ -62,8 +69,7 @@ commands run in the same folder.
 
 Docker Desktop is free for personal use, education, non-commercial open source and businesses with
 fewer than 250 employees and under $10 million in annual revenue; larger organisations need a paid
-Docker subscription. Windows Server hosts and the air-gapped install are not supported on Windows;
-use a Linux host for those.
+Docker subscription. The air-gapped install is not supported on Windows; use a Linux host.
 
 ## First login
 
@@ -113,6 +119,24 @@ Same stack, with `docker load` in front of the pull. `install.sh` loads the bund
 the agent installer in place and then runs `preflight.sh`, the same script the online quickstart
 runs, which checks the host, generates the database password and starts the stack. The agent installer
 travels inside the bundle, so first enrollment works with no internet at any point.
+
+## Upgrade
+
+**Back up first** ([how](PRODUCTION.md#backup--restore)): database migrations cannot be undone.
+Then, in the folder holding your `docker-compose.yml` (in PowerShell, `curl.exe -LO`; on a Podman
+host, `sudo` before `docker`):
+
+```bash
+curl -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/docker-compose.yml
+docker compose pull
+docker compose up -d
+```
+
+The new `docker-compose.yml` carries its release's version, so there is nothing to edit.
+Agents upgrade themselves once the server has the new agent, wherever an upgrade policy
+(Policies → Upgrade) covers them. What changed and any manual step: the
+[release page](https://github.com/PostureRMM/PostureRMM/releases/latest). Pinning a
+version: [configuration.md](configuration.md).
 
 ## Next
 
