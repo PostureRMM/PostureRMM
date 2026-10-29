@@ -3,7 +3,7 @@
   "info": {
     "title": "PostureRMM Integration API",
     "description": "Access to a PostureRMM install, for scripts and integrations: reads, and the writes that pass the same server-side gates as the web UI.\n\nWithin v1 a release may only add: an operation, an optional input, a response field or an enum value. Clients ignore fields they do not know and treat an enum value they do not know as unknown. Lists answer in a `{data, pagination}` envelope; `page` is 1-indexed and `per_page` is clamped to 1-100. The fleet-wide lists (`GET /compliance-results`, `GET /vulnerabilities`) page by `cursor` instead: pass `pagination.next_cursor` back until it is `null`; `per_page` is 1-1000 and there is no total. Every error is `{error, message, details?}`.",
-    "version": "1.26.0"
+    "version": "1.28.1"
   },
   "paths": {
     "/api/v1/admin/catalog-verification": {
@@ -21126,7 +21126,7 @@
               "string",
               "null"
             ],
-            "description": "The paid-through date, RFC 3339. Null when the license has none."
+            "description": "The expiry date of the signed license, RFC 3339. Null when the install\nholds no license, which is every install today."
           },
           "is_current": {
             "type": "boolean",
@@ -21150,7 +21150,7 @@
           },
           "paid_feeds": {
             "type": "boolean",
-            "description": "Whether paid vulnerability feeds are licensed. The only capability a\ntier gates: the endpoint cap is the tier boundary, and every self-hosted\nfeature is in Community (ADR-0019)."
+            "description": "Whether the install's license includes the licensed vulnerability feeds.\nThe only capability a tier gates: the endpoint cap is the tier boundary,\nand every self-hosted feature is in Community (ADR-0019)."
           },
           "pending_count": {
             "type": "integer",
@@ -21171,7 +21171,7 @@
           },
           "tier": {
             "type": "string",
-            "description": "`community`, or `business` when a verified Business license is in force\n(an older Bastion may report `pro`, which means the same). A Business\nlicense past its paid-through date plus 7 days reads `community`."
+            "description": "`community`, the free tier with every feature, which is what every\ninstall reports today. A signed license, when the install holds one, can\nset `business` (an older Bastion may report `pro`, which means the\nsame); a license past its expiry date plus 7 days reads `community`."
           }
         }
       },

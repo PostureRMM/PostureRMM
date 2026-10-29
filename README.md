@@ -51,7 +51,7 @@ guess dressed up as a number. An empty fleet reads "not yet established", not ze
 
 ## What's in the box
 
-**4,336 atomic compliance checks** across eighteen platforms, imported from upstream DISA SCAP/XCCDF,
+**4,335 atomic compliance checks** across eighteen platforms, imported from upstream DISA SCAP/XCCDF,
 the Microsoft Security Compliance Toolkit and ComplianceAsCode by dedicated importers — not
 hand-transcribed — alongside PostureRMM's own curated hardening checks:
 
@@ -60,7 +60,7 @@ hand-transcribed — alongside PostureRMM's own curated hardening checks:
 | Windows 11 · 10 | 573 · 515 |
 | Windows Server 2022 · 2019 · 2016 · 2025 | 458 · 453 · 338 · 494 |
 | Microsoft 365 Apps · Edge · Chrome · Firefox · Acrobat Reader | 202 · 79 · 39 · 26 · 2 |
-| Ubuntu 22.04 · 24.04 · 26.04 | 103 · 103 · 66 |
+| Ubuntu 22.04 · 24.04 · 26.04 | 103 · 103 · 65 |
 | Debian 12 · 13 | 208 · 208 |
 | RHEL 9 · 10 (and Rocky, AlmaLinux) | 249 · 220 |
 
@@ -142,8 +142,25 @@ curl.exe -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/p
 powershell -ExecutionPolicy Bypass -File .\preflight.ps1
 ```
 
+Windows Server can't host the PostureRMM server: Docker Desktop runs on Windows 10 and 11 only. Run a small Linux VM in
+Hyper-V and use the Linux install above; Windows Server stays a supported endpoint.
+
 Nothing to edit — no values to choose, no certificates, no DNS. Requirements, Docker Desktop's
 licence, first login and the air-gapped install: **[docs/quickstart.md](docs/quickstart.md)**.
+
+## Upgrade
+
+**Back up first** ([how](docs/PRODUCTION.md#backup--restore)): database migrations cannot be undone.
+Then, in the folder holding your `docker-compose.yml` (in PowerShell, `curl.exe -LO`):
+
+```bash
+curl -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/docker-compose.yml
+docker compose pull
+docker compose up -d
+```
+
+Agents upgrade themselves once the server has the new agent, wherever an upgrade policy covers them.
+What changed and any manual step: the [release page](https://github.com/PostureRMM/PostureRMM/releases/latest).
 
 ## Configuration
 

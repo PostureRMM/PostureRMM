@@ -346,34 +346,19 @@ docker compose logs backend | grep '"target":"access"'
 # Restart a single service
 docker compose restart backend
 
-# Upgrade — replace docker-compose.yml with the new release's copy, which
-# carries that release's version baked in, then pull and recreate. Nothing to
-# edit; add POSTURERMM_VERSION to .env only to pin a version against the file.
-# Every `up -d` first runs the one-shot db-setup as the database superuser
-# (`posturermm`, whose password only `db` and `db-setup` receive). It creates
-# `posturermm_owner` (no SUPERUSER, BYPASSRLS, CREATEROLE or CREATEDB), gives it
-# the database and everything in it, creates `posturermm_app` with DML grants
-# only, and writes both generated passwords to /app/data/pgpass. The backend
-# migrates as the owner, serves requests as the app role and refuses a
-# superuser, so an install from before db-setup converts on its first `up -d`.
-# On your own PostgreSQL, give the backend two such roles: DATABASE_OWNER_URL
-# owning its database and a member of pg_read_all_stats, DATABASE_URL owning
-# nothing. The pgcrypto extension must be available.
-curl -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/docker-compose.yml
-docker compose pull
-docker compose up -d
-
 # Drop into the DB shell, as the superuser
 docker compose exec db psql -U posturermm posturermm
 ```
 
-Read the target version's release notes: a release needing a one-time manual
-step says so there, and the backend itself refuses to start and prints the
-recipe.
+**Container logs are capped** at four 25 MB files per container (`x-logging` in each
+compose file).
 
-**Container logs are capped** at four 25 MB files per container (`x-logging`, atop
-each compose file). A bastion or proxy host takes the cap on re-download and
-`up -d`.
+### Upgrading
+
+**Back up first** ([Backup & Restore](#backup--restore)): migrations cannot be
+undone. Then follow the [quickstart](quickstart.md#upgrade); `up -d`
+runs db-setup first, creating the [database roles](configuration.md#your-own-postgresql).
+A release needing a manual step stops the backend at start and prints the recipe.
 
 ### Verifying a release
 
@@ -385,11 +370,12 @@ curl -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/SHA25
 sha256sum -c --ignore-missing SHA256SUMS.txt
 ```
 
-Each release attaches CycloneDX 1.5 SBOMs: `sbom-<binary>-<version>-<target>.cdx.json`
-per binary and `sbom-image-<name>-<version>.cdx.json` per image, which also
-lists its Debian packages. Load them into your scanner, or read one directly:
+`sbom-<version>.tar.gz` holds the CycloneDX 1.5 SBOMs, one per binary and per
+image (an image's also lists its Debian packages). Unpack it for your scanner,
+or read one directly:
 
 ```bash
+tar -xzf sbom-X.Y.Z.tar.gz
 jq -r '.components[] | "\(.name) \(.version)"' sbom-image-backend-X.Y.Z.cdx.json
 ```
 
