@@ -228,7 +228,7 @@ the UI.
 
 ## Agent rollout
 
-1. **Create an install key** — Admin UI → Settings → Enrollment → Create key.
+1. **Create an install key** — Settings → Fleet setup → Enrollment keys → Create key.
    The key is optional and only skips the approval queue; without it the
    one-liner still enrolls, inert, until you admit the endpoint from Endpoints.
    `POSTURERMM_SERVER__ALLOW_AUTO_ENROLLMENT=true` admits keyless enrollments
@@ -443,7 +443,7 @@ No query was faster with JIT on.
 
 ### Data retention
 
-Settings → Retention (SuperAdmin) controls four windows, all enforced daily by
+Deployment → Data retention (SuperAdmin) controls four windows, all enforced daily by
 the same scheduler job:
 
 | Setting | Default | Notes |
@@ -459,8 +459,8 @@ runs in bounded batches, and pruning the audit log writes one more audit row
 sink has not yet received are never pruned; the run logs how many.
 
 A run that cannot read all four windows prunes nothing and logs the key at
-fault, rather than falling back to the defaults. Save a real number on the
-Retention page and the next daily run recovers.
+fault, rather than falling back to the defaults. Save a real number and the next
+daily run recovers.
 
 Three telemetry histories are pruned hourly on fixed windows you do not set:
 performance metrics and endpoint reachability at **30 days**, disk SMART history
@@ -468,7 +468,7 @@ at **2 years**.
 
 ### Forwarding the audit log
 
-Settings → System → Audit forwarding (SuperAdmin) sends every audit row to one
+Settings → Deployment → Audit forwarding (SuperAdmin) sends every audit row to one
 syslog receiver: RFC 5424 over TLS, RFC 5425 octet-counted framing, standard port
 6514. Rows go in order and queue while the receiver is down. Each is one JSON
 object (facility 13, severity notice, APP-NAME `posturermm`, MSGID the action):

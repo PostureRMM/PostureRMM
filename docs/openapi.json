@@ -3,7 +3,7 @@
   "info": {
     "title": "PostureRMM Integration API",
     "description": "Access to a PostureRMM install, for scripts and integrations: reads, and the writes that pass the same server-side gates as the web UI.\n\nWithin v1 a release may only add: an operation, an optional input, a response field or an enum value. Clients ignore fields they do not know and treat an enum value they do not know as unknown. Lists answer in a `{data, pagination}` envelope; `page` is 1-indexed and `per_page` is clamped to 1-100. The fleet-wide lists (`GET /compliance-results`, `GET /vulnerabilities`) page by `cursor` instead: pass `pagination.next_cursor` back until it is `null`; `per_page` is 1-1000 and there is no total. Every error is `{error, message, details?}`.",
-    "version": "1.28.1"
+    "version": "1.29.0"
   },
   "paths": {
     "/api/v1/admin/catalog-verification": {
@@ -346,7 +346,7 @@
           "feed"
         ],
         "summary": "Pull the feed now, outside the hourly schedule.",
-        "description": "Super admin only: the pull writes every shared feed table, for every\nOrganization (ADR-0072). It answers 202 with no body, and the sync runs\ndetached in this server process. It is not queued durably: a restart before it\nfinishes drops it (the next scheduled pull runs regardless), and its outcome is\nnot returned, only logged and shown on Settings, Bastion. A large backlog takes\nminutes, which is why the request does not wait. Answers 409 when a pull is\nalready running (the hourly one, or an earlier Sync Now), and 503 when the\nserver's feed puller is not running.",
+        "description": "Super admin only: the pull writes every shared feed table, for every\nOrganization (ADR-0072). It answers 202 with no body, and the sync runs\ndetached in this server process. It is not queued durably: a restart before it\nfinishes drops it (the next scheduled pull runs regardless), and its outcome is\nnot returned, only logged and shown on System health, Bastion. A large backlog takes\nminutes, which is why the request does not wait. Answers 409 when a pull is\nalready running (the hourly one, or an earlier Sync Now), and 503 when the\nserver's feed puller is not running.",
         "operationId": "sync_feed_now",
         "responses": {
           "202": {
@@ -21807,6 +21807,12 @@
             ]
           },
           {
+            "type": "string",
+            "enum": [
+              "not_linux"
+            ]
+          },
+          {
             "type": "object",
             "required": [
               "undeliverable"
@@ -21824,7 +21830,7 @@
             ]
           }
         ],
-        "description": "Why a Linux package pair was not dispatched: the string `not_applicable` or\n`already_in_flight`, or `{\"undeliverable\": <reason>}`. Treat an unknown value\nas unknown."
+        "description": "Why a Linux package pair was not dispatched: the string `not_applicable`,\n`not_linux` or `already_in_flight`, or `{\"undeliverable\": <reason>}`. Treat an unknown value\nas unknown."
       },
       "PaginatedResponse_AccessibleTenantResponse": {
         "type": "object",

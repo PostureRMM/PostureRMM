@@ -51,7 +51,7 @@ guess dressed up as a number. An empty fleet reads "not yet established", not ze
 
 ## What's in the box
 
-**4,335 atomic compliance checks** across eighteen platforms, imported from upstream DISA SCAP/XCCDF,
+**4,406 atomic compliance checks** across eighteen platforms, imported from upstream DISA SCAP/XCCDF,
 the Microsoft Security Compliance Toolkit and ComplianceAsCode by dedicated importers — not
 hand-transcribed — alongside PostureRMM's own curated hardening checks:
 
@@ -62,7 +62,7 @@ hand-transcribed — alongside PostureRMM's own curated hardening checks:
 | Microsoft 365 Apps · Edge · Chrome · Firefox · Acrobat Reader | 202 · 79 · 39 · 26 · 2 |
 | Ubuntu 22.04 · 24.04 · 26.04 | 103 · 103 · 65 |
 | Debian 12 · 13 | 208 · 208 |
-| RHEL 9 · 10 (and Rocky, AlmaLinux) | 249 · 220 |
+| RHEL 9 · 10 (and Rocky, AlmaLinux) | 249 · 291 |
 
 Plus **seven mandate crosswalks** — HIPAA, PCI DSS v4, SOC 2 CC, ISO 27001 Annex A, CMMC L1 and L2,
 and Cyber Essentials — mapping regulatory controls back to the checks that answer them, and the ACSC
