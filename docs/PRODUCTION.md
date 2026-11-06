@@ -228,7 +228,7 @@ the UI.
 
 ## Agent rollout
 
-1. **Create an install key** — Settings → Fleet setup → Enrollment keys → Create key.
+1. **Create an install key** — Settings → Enrollment → Create key.
    The key is optional and only skips the approval queue; without it the
    one-liner still enrolls, inert, until you admit the endpoint from Endpoints.
    `POSTURERMM_SERVER__ALLOW_AUTO_ENROLLMENT=true` admits keyless enrollments
