@@ -11,8 +11,8 @@ operator guide is [PRODUCTION.md](PRODUCTION.md).
 
 ## What you need
 
-- A **SuperAdmin** account. SSO is configured at **Access → People &
-  access** (`/settings/people`), in the **Single sign-on** section.
+- A **SuperAdmin** account. SSO is configured at **Settings → Single
+  sign-on** (`/settings/sso`).
 - `POSTURERMM_SERVER__PUBLIC_URL` set to the address your browser uses. The
   default is `https://<POSTURERMM_DOMAIN>:<POSTURERMM_HTTPS_PORT>`; see
   [configuration.md](configuration.md). The panel shows a warning while it is

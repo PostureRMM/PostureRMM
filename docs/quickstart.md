@@ -98,7 +98,7 @@ only once the Linux agent packages are on the server; until then it says why.
 
 These commands carry no install key, so the endpoint arrives in the approval queue rather than
 straight into the fleet. Admit it from the same screen — or from **Pending approval** on
-**Settings → Fleet setup → Enrollment keys** — and its first compliance scan finishes a few
+**Settings → Enrollment** — and its first compliance scan finishes a few
 minutes later.
 
 ## Air-gapped install
