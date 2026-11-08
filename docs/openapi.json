@@ -3,7 +3,7 @@
   "info": {
     "title": "PostureRMM Integration API",
     "description": "Access to a PostureRMM install, for scripts and integrations: reads, and the writes that pass the same server-side gates as the web UI.\n\nWithin v1 a release may only add: an operation, an optional input, a response field or an enum value. Clients ignore fields they do not know and treat an enum value they do not know as unknown. Lists answer in a `{data, pagination}` envelope; `page` is 1-indexed and `per_page` is clamped to 1-100. The fleet-wide lists (`GET /compliance-results`, `GET /vulnerabilities`) page by `cursor` instead: pass `pagination.next_cursor` back until it is `null`; `per_page` is 1-1000 and there is no total. Every error is `{error, message, details?}`.",
-    "version": "1.30.0"
+    "version": "1.31.0"
   },
   "paths": {
     "/api/v1/admin/catalog-verification": {
@@ -11,12 +11,12 @@
         "tags": [
           "app-catalog"
         ],
-        "summary": "The app-catalogue verification matrix: one row per catalogue app, with a cell\nfor each Windows line and install or uninstall phase.",
+        "summary": "The app catalog verification matrix: one row per catalog app, with a cell\nfor each Windows line and install or uninstall phase.",
         "description": "Super admin only: the matrix aggregates every Organization's test-endpoint runs.\nIt is a vendor QA surface, read by the `verify-catalog report` command, and\nanswers whether PostureRMM's own app packaging has been proven to install and\nuninstall.",
         "operationId": "get_catalog_verification",
         "responses": {
           "200": {
-            "description": "Every catalogue app with its verification cells",
+            "description": "Every catalog app with its verification cells",
             "content": {
               "application/json": {
                 "schema": {
@@ -86,7 +86,7 @@
         "tags": [
           "feed"
         ],
-        "summary": "What the feed's recent syncs retired from the catalogue, newest first.",
+        "summary": "What the feed's recent syncs retired from the catalog, newest first.",
         "description": "Admin or super admin. The log is feed-wide: every Organization reads the same\nrecords.",
         "operationId": "get_reconciliation_log",
         "parameters": [
@@ -430,7 +430,7 @@
         "tags": [
           "alerts"
         ],
-        "summary": "List alert fires, newest first, within the key's group scope.",
+        "summary": "List triggered alerts, newest first, within the key's group scope.",
         "operationId": "list_alerts",
         "parameters": [
           {
@@ -461,7 +461,7 @@
           {
             "name": "severity",
             "in": "query",
-            "description": "Only fires of this severity.",
+            "description": "Only triggered alerts of this severity.",
             "required": false,
             "schema": {
               "$ref": "#/components/schemas/AlertSeverityWire"
@@ -470,7 +470,7 @@
           {
             "name": "open_only",
             "in": "query",
-            "description": "`true` keeps only fires that are still open, whatever their age.",
+            "description": "`true` keeps only triggered alerts that are still open, whatever their age.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -479,7 +479,7 @@
           {
             "name": "from",
             "in": "query",
-            "description": "Only fires at or after this instant (RFC 3339).",
+            "description": "Only triggered alerts at or after this instant (RFC 3339).",
             "required": false,
             "schema": {
               "type": "string",
@@ -489,7 +489,7 @@
           {
             "name": "to",
             "in": "query",
-            "description": "Only fires at or before this instant (RFC 3339).",
+            "description": "Only triggered alerts at or before this instant (RFC 3339).",
             "required": false,
             "schema": {
               "type": "string",
@@ -499,7 +499,7 @@
         ],
         "responses": {
           "200": {
-            "description": "A page of alert fires",
+            "description": "A page of triggered alerts",
             "content": {
               "application/json": {
                 "schema": {
@@ -566,13 +566,13 @@
         "tags": [
           "alerts"
         ],
-        "summary": "One alert fire. `404` when it does not exist or is outside the key's group\nscope.",
+        "summary": "One triggered alert. `404` when it does not exist or is outside the key's group\nscope.",
         "operationId": "get_alert",
         "parameters": [
           {
             "name": "id",
             "in": "path",
-            "description": "Alert fire id",
+            "description": "Triggered alert id",
             "required": true,
             "schema": {
               "type": "string",
@@ -582,7 +582,7 @@
         ],
         "responses": {
           "200": {
-            "description": "The alert fire",
+            "description": "The triggered alert",
             "content": {
               "application/json": {
                 "schema": {
@@ -659,7 +659,7 @@
         "tags": [
           "app-catalog"
         ],
-        "summary": "The app catalogue: every entry the install knows, with the calling\nOrganization's install counts beside it.",
+        "summary": "The app catalog: every entry the install knows, with the calling\nOrganization's install counts beside it.",
         "description": "Any role. The entries are install-wide; `installed_count` and `missing_count`\ncount only the calling Organization's endpoints inside the caller's group read\nscope. Active entries only, unless `lifecycle` says otherwise.",
         "operationId": "list_entries",
         "parameters": [
@@ -774,8 +774,8 @@
         "tags": [
           "app-catalog"
         ],
-        "summary": "Add an entry to the catalogue.",
-        "description": "Super admin only: the catalogue is shared by every Organization (ADR-0072),\nso a tenant-scoped admin must not add, edit or remove entries the others\nalso see.",
+        "summary": "Add an entry to the catalog.",
+        "description": "Super admin only: the catalog is shared by every Organization (ADR-0072),\nso a tenant-scoped admin must not add, edit or remove entries the others\nalso see.",
         "operationId": "create_entry",
         "requestBody": {
           "content": {
@@ -16122,12 +16122,14 @@
           "crash_detected",
           "banned_app_detected",
           "audit_forwarding_stalled",
-          "monitor_failing"
+          "monitor_failing",
+          "certificate_expiring",
+          "benchmark_drift"
         ]
       },
       "AlertEventResponse": {
         "type": "object",
-        "description": "One alert fire.",
+        "description": "One triggered alert.",
         "required": [
           "id",
           "rule_id",
@@ -16146,7 +16148,7 @@
               "null"
             ],
             "format": "date-time",
-            "description": "When the condition stopped holding. Null while the fire is open, and\nalways null for a one-off condition (`crash_detected`, `patch_failure`)\nthat never clears."
+            "description": "When the condition stopped holding. Null while the alert is open, and\nalways null for a one-off condition (`crash_detected`, `patch_failure`)\nthat never clears."
           },
           "condition_type": {
             "$ref": "#/components/schemas/AlertConditionWire"
@@ -16157,7 +16159,7 @@
               "null"
             ],
             "format": "uuid",
-            "description": "The endpoint the fire is about. Null for a fleet-wide fire, which a\ngroup-scoped key never sees."
+            "description": "The endpoint the alert is about. Null for a fleet-wide alert, which a\ngroup-scoped key never sees."
           },
           "fired_at": {
             "type": "string",
@@ -16249,7 +16251,7 @@
       },
       "AppCatalogEntryResponse": {
         "type": "object",
-        "description": "One catalog entry. The catalogue is install-wide: every Organization sees the\nsame entries.",
+        "description": "One catalog entry. The catalog is install-wide: every Organization sees the\nsame entries.",
         "required": [
           "id",
           "winget_id",
@@ -16413,7 +16415,7 @@
       },
       "AppRow": {
         "type": "object",
-        "description": "One catalogue app with its verification cells.",
+        "description": "One catalog app with its verification cells.",
         "required": [
           "app_id",
           "winget_id",
@@ -16597,6 +16599,77 @@
             "description": "The acting user. Null for an event the system wrote on its own."
           }
         }
+      },
+      "BenchmarkVerdictResponse": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "exceptions",
+              "verdict"
+            ],
+            "properties": {
+              "exceptions": {
+                "type": "integer",
+                "format": "int64"
+              },
+              "verdict": {
+                "type": "string",
+                "enum": [
+                  "passes"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "n",
+              "verdict"
+            ],
+            "properties": {
+              "n": {
+                "type": "integer",
+                "format": "int64"
+              },
+              "verdict": {
+                "type": "string",
+                "enum": [
+                  "gaps"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "verdict"
+            ],
+            "properties": {
+              "verdict": {
+                "type": "string",
+                "enum": [
+                  "not_yet_measured"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "verdict"
+            ],
+            "properties": {
+              "verdict": {
+                "type": "string",
+                "enum": [
+                  "not_applicable"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "A benchmark's verdict. `passes` means every automated rule that applies\npasses (failures under an accepted risk count as passing, `exceptions` of\nthem); `error` is never a pass."
       },
       "BulkActionResponse": {
         "oneOf": [
@@ -16863,7 +16936,8 @@
           "running",
           "awaiting_approval",
           "approved",
-          "aborted"
+          "aborted",
+          "halted"
         ]
       },
       "CancelChangeResponse": {
@@ -18017,7 +18091,7 @@
       },
       "ComplianceSummaryResponse": {
         "type": "object",
-        "description": "Compliance summary response.\n\n**Contract change, 2026-07-25 (#2591).** `total_checks`, `not_applicable`,\n`skipped` and the matching `by_status` entries narrowed to *checks that could\napply to this endpoint*: a check written for an operating system this host can\nnever be no longer appears in any of them. On a Windows 10 endpoint that took\n`total_checks` from 2311 to ~679 and `not_applicable` from ~1942 to\napproximately zero — the field now means \"genuine per-endpoint exception\" (a\nrelease-gated check, an absent app) rather than \"the rest of the catalogue\".\n`passed`, `failed`, `errors`, `critical_failures`, `high_failures` and\n`compliance_percent` are unchanged for every endpoint; the percentage is\n`passed / (passed + failed)` and already excluded `not_applicable`. There were\nno external consumers pre-launch, so no compatibility shim exists. Rationale\nand the paired `compliance_snapshots` step change: ADR-0027 →\n\"Per-endpoint compliance summary — applicability\".",
+        "description": "Compliance summary response.\n\n**Contract change, 2026-07-25 (#2591).** `total_checks`, `not_applicable`,\n`skipped` and the matching `by_status` entries narrowed to *checks that could\napply to this endpoint*: a check written for an operating system this host can\nnever be no longer appears in any of them. On a Windows 10 endpoint that took\n`total_checks` from 2311 to ~679 and `not_applicable` from ~1942 to\napproximately zero — the field now means \"genuine per-endpoint exception\" (a\nrelease-gated check, an absent app) rather than \"the rest of the catalog\".\n`passed`, `failed`, `errors`, `critical_failures`, `high_failures` and\n`compliance_percent` are unchanged for every endpoint; the percentage is\n`passed / (passed + failed)` and already excluded `not_applicable`. There were\nno external consumers pre-launch, so no compatibility shim exists. Rationale\nand the paired `compliance_snapshots` step change: ADR-0027 →\n\"Per-endpoint compliance summary — applicability\".",
         "required": [
           "endpoint_id",
           "policy_id",
@@ -21587,7 +21661,7 @@
           "open_alert_count": {
             "type": "integer",
             "format": "int64",
-            "description": "Open alert fires, however old."
+            "description": "Open triggered alerts, however old."
           },
           "tenant_id": {
             "type": "string",
@@ -22757,7 +22831,7 @@
               "string",
               "null"
             ],
-            "description": "`deploy` (install an app from the catalogue) or `script`. Null when the\naction has no automatic fix."
+            "description": "`deploy` (install an app from the catalog) or `script`. Null when the\naction has no automatic fix."
           },
           "auto_fixable": {
             "type": "boolean",
@@ -22769,7 +22843,7 @@
               "null"
             ],
             "format": "uuid",
-            "description": "The catalogue entry or script the fix runs."
+            "description": "The catalog entry or script the fix runs."
           },
           "category": {
             "type": "string",
@@ -23403,7 +23477,10 @@
           "failed",
           "errored",
           "not_applicable",
+          "not_measured",
+          "excepted",
           "compliance_percent",
+          "verdict",
           "last_assessed",
           "pinned_version",
           "pinned_at",
@@ -23425,7 +23502,7 @@
           "compliance_percent": {
             "type": "number",
             "format": "double",
-            "description": "0 to 100, one decimal, over pass and fail (errors excluded)."
+            "description": "0 to 100, one decimal: passing rules over the rules that reached a verdict\n(pass, fail, error). An error is not a pass; a failure under an accepted\nrisk counts as passing."
           },
           "enabled": {
             "type": "boolean"
@@ -23433,6 +23510,11 @@
           "errored": {
             "type": "integer",
             "format": "int64"
+          },
+          "excepted": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The part of `failed` and `errored` under a live accepted risk."
           },
           "failed": {
             "type": "integer",
@@ -23483,6 +23565,11 @@
             "type": "integer",
             "format": "int64"
           },
+          "not_measured": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Rules with no verdict yet: never scanned, withheld from the agent, or\nskipped."
+          },
           "passed": {
             "type": "integer",
             "format": "int64"
@@ -23525,6 +23612,17 @@
           },
           "title": {
             "type": "string"
+          },
+          "verdict": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/BenchmarkVerdictResponse",
+                "description": "The qualified verdict for a published benchmark; null for anything else\n(the scored baseline, a framework lens, a PostureRMM-authored profile),\nwhich has none."
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "version": {
             "type": "string"
@@ -23735,7 +23833,7 @@
       },
       "ReconciliationLogEntry": {
         "type": "object",
-        "description": "What one feed sync retired from the catalogue.",
+        "description": "What one feed sync retired from the catalog.",
         "required": [
           "id",
           "bundle_version",
@@ -23748,7 +23846,7 @@
           "apps_removed": {
             "type": "integer",
             "format": "int32",
-            "description": "Apps the feed dropped from the catalogue."
+            "description": "Apps the feed dropped from the catalog."
           },
           "bundle_version": {
             "type": [
@@ -24999,7 +25097,11 @@
           "resolve_dnf_packages",
           "install_dnf_packages",
           "rotate_local_admin_password",
-          "enable_bitlocker"
+          "enable_bitlocker",
+          "deploy_certificate",
+          "remove_certificate",
+          "plan_apt_packages",
+          "plan_dnf_packages"
         ]
       },
       "TenantBrandingResponse": {
@@ -26078,7 +26180,7 @@
     },
     {
       "name": "alerts",
-      "description": "Alert fires: what a rule caught, and whether it is still open"
+      "description": "Triggered alerts: what a rule caught, and whether it is still open"
     },
     {
       "name": "changes",
@@ -26086,7 +26188,7 @@
     },
     {
       "name": "app-catalog",
-      "description": "The install-wide app catalogue, deploying an entry, and its verification matrix"
+      "description": "The install-wide app catalog, deploying an entry, and its verification matrix"
     },
     {
       "name": "account",
