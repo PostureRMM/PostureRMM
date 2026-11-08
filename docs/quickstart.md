@@ -135,8 +135,8 @@ docker compose up -d
 
 The new `docker-compose.yml` carries its release's version, so there is nothing to edit.
 Agents upgrade themselves once the server has the new agent, wherever an upgrade policy
-(Policies → Upgrade) covers them. What changed and any manual step: the
-[release page](https://github.com/PostureRMM/PostureRMM/releases/latest). Pinning a
+(Policies → Upgrade) covers them. What changed and any manual step, for every release you are
+skipping: the [release notes](https://github.com/PostureRMM/PostureRMM/blob/main/docs/release-notes.md). Pinning a
 version: [configuration.md](configuration.md).
 
 ## Next
