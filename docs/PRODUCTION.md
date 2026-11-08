@@ -23,50 +23,47 @@ bastion → HTTP  → backend:3000 (admin API, status, sync)
 There is no separate web tier. The backend's `:80` listener redirects to HTTPS
 except for the plaintext
 `/install.ps1`, `/install-agent.sh` and `/downloads/*` bootstrap paths, and its
-`:3000` plane is never published. Only the Bastion talks to the internet.
+`:3000` plane is never published. Only the Bastion reaches the feed.
 
 ## License
 
 PostureRMM is proprietary software, licensed under the
 [End-User License Agreement](../LICENSE) shipped with every release; installing
 or running it accepts those terms. PostureRMM is in beta. It is free for up to 50
-endpoints, with every feature. Paid plans are not available yet. Only builds we publish are
-covered.
+endpoints, with every feature; paid plans are not available yet. Only builds we
+publish are covered.
 
 ## TLS and agent trust
 
 **The default install is self-signed, and agents pin the certificate
-authority.** There is no Let's Encrypt, no ACME, and nothing to obtain before
-your first endpoint enrolls — a fresh install must work offline on a LAN with
-no domain.
+authority.** Nothing is obtained before your first endpoint enrolls: a fresh
+install works offline on a LAN with no domain.
 
 Agents do *not* use the system root store on a default install. The install
 script stamps the CA's SHA-256 fingerprint into the agent, which then checks
 chain, validity and hostname against a trust anchor of exactly one certificate.
 
-Two consequences worth knowing before you operate this:
+Two consequences:
 
 - **Rotating the leaf is safe.** Changing `POSTURERMM_DOMAIN` re-mints only the
-  leaf; the CA is persisted and reused, so enrolled agents keep working.
+  leaf; the CA is reused, so enrolled agents keep working.
 - **Replacing the CA is a fleet event, but not a manual one.** It happens on
-  first boot, and otherwise only when you remove `ca.crt` + `ca.key` or move
-  between a public certificate and a private one. Enrolled agents lose their
-  transport at that moment and recover on their own: after a few failed
-  check-ins each asks the `:80` bootstrap listener for the current authority and
-  adopts it **only** if the server can prove it knows that endpoint's own
-  enrollment secret; the fleet reconverges within minutes.
-
-  Losing both files costs agents nothing; you lose what trusted the old CA
-  by hand (browsers, trust stores, tools). Back both files up.
+  first boot, or when you remove `ca.crt` + `ca.key` or move between a public
+  and a private certificate. Enrolled agents lose their
+  transport, then recover on their own: after a few failed check-ins each asks
+  the `:80` bootstrap listener for the current authority and adopts it **only**
+  if the server can prove it knows that endpoint's enrollment secret; the fleet
+  reconverges within minutes. Losing both files costs agents nothing, only what
+  trusted the old CA by hand (browsers, trust stores, tools). Back both up.
 
 **The pin is delivered over plain HTTP.** Port 80 serves `/install.ps1`
-deliberately: with a self-signed certificate a fresh endpoint cannot validate
-an HTTPS fetch. Enrollment roots in one unauthenticated fetch on your LAN, which
+deliberately: with a self-signed certificate a fresh endpoint cannot validate an
+HTTPS fetch. Enrollment roots in one unauthenticated fetch on your LAN, which
 pinning narrows to a single request; the approval queue gates admission.
 **With a real certificate** the install screens lead with the `https://`
-one-liner, so no one on the path can rewrite a SYSTEM script, and a
-labelled `http://` form below it serves Windows Server 2016, whose PowerShell
-cannot complete the HTTPS fetch.
+one-liner, so no one on the path can rewrite a SYSTEM script; a labelled
+`http://` form below it serves Windows Server 2016, whose PowerShell cannot
+complete the HTTPS fetch.
 
 [configuration.md](configuration.md) covers bringing your own certificate. If your
 *edge* (a reverse proxy, a tunnel) terminates TLS with a certificate the backend
@@ -80,11 +77,10 @@ shipped, there is nothing to do. With your own terminator in front, three
 settings are required:
 
 1. **`POSTURERMM_SERVER__TRUSTED_PROXIES` = your terminator's address.** Skip
-   it and every request resolves to the proxy: each audit row records the proxy
-   rather than the actor, and ten failed logins from anywhere return 429 to every
-   user, and enrollment lockouts too. The backend warns once when
-   a forwarding header arrives from an untrusted address, and that line means this
-   setting is missing.
+   it and every request resolves to the proxy: audit rows record the proxy, not
+   the actor, and ten failed logins from anywhere return 429 to every user. The
+   backend warns once on a forwarding header from an untrusted address: that
+   means this setting is missing.
 2. **`Strict-Transport-Security` is your terminator's to send.** The backend
    sends HSTS only when it terminates TLS itself.
 3. **Forward `Host` unchanged** (nginx: `proxy_set_header Host $host;`).
@@ -160,16 +156,16 @@ protected zone) the hosts cannot share that volume. Generate one secret with
    secret authenticates the backend; it does not encrypt.
 
 Changing the split URL or secret means updating `.env` and recreating the
-backend container on both hosts; during a mismatch the backend fails closed with
-a named authentication error.
+backend container on both hosts.
+
+A SuperAdmin sets the sync interval on System health → Bastion: 15 minutes to 24 hours, hourly by default.
 
 ## Proxy container
 
 A proxy is optional and exists for **segmented networks**: agents that cannot
 reach the backend directly point at a proxy in their own segment, which relays
-for them and caches downloads. Old buffer settings and volumes are inert. It
-ships as the release download `docker-compose.proxy.yml`, also in the offline
-bundle with its image.
+for them and caches downloads. It ships as the release download
+`docker-compose.proxy.yml`, also in the offline bundle with its image.
 
 ### Registering it
 
@@ -194,6 +190,21 @@ docker compose -f docker-compose.proxy.yml up -d
    log still records the real endpoint — provided
    `POSTURERMM_SERVER__TRUSTED_PROXIES` names the proxy's address. Omit it and
    every row from that segment shows the proxy instead.
+
+### What works through a proxy
+
+| Run live through a proxy | Windows 11 | Debian 13 |
+|---|---|---|
+| Paths the proxy relays | `/api/v1/agent/*`, `/repo/*` only | Same |
+| Enroll, check-in, inventory, compliance scan, Fix gaps | Works | Works |
+| Script, file upload and download, services and processes | Works | Works |
+| Remote terminal | Works | Works |
+| Remote desktop, event logs, tamper protection, tray and self-service | Works | n/a |
+| winget app patch (download cached by the proxy) | Works | n/a |
+| Linux package patch (`/repo/`) | n/a | Works |
+| Agent upgrade | Not proven: no newer signed release | Same-version reinstall works |
+| Windows Update offline payload | Not proven: the lab held none | n/a |
+| Certificate deploy | Not proven: the lab agents predate it | Not proven |
 
 ### Configuring it
 
@@ -228,12 +239,11 @@ the UI.
 
 ## Agent rollout
 
-1. **Create an install key** — Settings → Enrollment → Create key.
+1. **Create the key** — Settings → Enrollment → Create install key.
    The key is optional and only skips the approval queue; without it the
    one-liner still enrolls, inert, until you admit the endpoint from Endpoints.
    `POSTURERMM_SERVER__ALLOW_AUTO_ENROLLMENT=true` admits keyless enrollments
-   instantly: a trusted-LAN convenience, an open door on anything
-   internet-reachable.
+   instantly: a trusted-LAN convenience, an open door on anything internet-facing.
 2. **Run the one-liner** on the target Windows endpoint (elevated PowerShell):
    ```powershell
    irm "http://posturermm.example.com/install.ps1?key=..." | iex
@@ -242,19 +252,18 @@ the UI.
    MSI and runs `msiexec /i /qn SERVERURL=https://posturermm.example.com`; the
    agent reads the key file on first boot, enrolls, and self-cleans it.
 
-**Where the MSI on the server comes from.** You never place it. An **offline
-install** gets it from the bundle; an **online install** from the product feed on
-the Bastion's first pull. Until then Endpoints → Install first endpoint shows
-*Fetching agent v…* and offers no install command. Behind a maintenance window
-that lasts until the window opens; the request is queued durably.
+**Where the MSI comes from.** You never place it: an **offline install** gets
+it from the bundle, an **online install** from the product feed on the Bastion's
+first pull. Until then Endpoints → Install first endpoint shows *Fetching agent
+v…* and no install command. Behind a maintenance window it waits, queued.
 
 For SCCM / Intune / GPO flows, take the MSI URL and checksum from Admin UI →
 Endpoints → Install agent → More install options, pass `SERVERURL` on the
 `msiexec` command line, and drop `install-key.txt` beside the MSI.
 
 **The install key travels in the URL's query string** (`?key=`), the only place
-the one-line installers can take it, so a reverse proxy
-may log it. Revoke the key when the rollout ends.
+the one-line installers can take it, so a reverse proxy may log it. Revoke it
+when the rollout ends.
 
 ### Linux endpoints
 
@@ -290,6 +299,16 @@ installed from the agent's private source list; registered RHEL uses its own
 repositories. Unregistered RHEL, and AlmaLinux 10 on a CPU without x86-64-v3,
 are scanned, not patched.
 
+### Tamper protection
+
+Windows only. Settings → Deployment → Tamper protection sets one password,
+applied at each agent's next check-in. Administrators are then refused `sc stop`,
+`sc delete` and `msiexec /x` (without `TAMPERPASSWORD=`). `manage stop`,
+`manage pre-uninstall` and `config set` ask for the password without echo;
+scripts pass `--password`. Five wrong ones shut the agent to attempts for five
+minutes, restarts included. Each wrong or shut-out attempt is also audited against
+the device. SYSTEM can still stop it.
+
 ### Local endpoint policy
 
 | | Windows | Linux |
@@ -313,22 +332,27 @@ one of two ways:
    posturermm-agent.exe config set server.url https://posturermm.example.com
    posturermm-agent.exe config get     # sanity check
    ```
-   Validates the URL, writes the registry value, restarts `PostureRMM-Agent`
-   and emits an `audit.config` log line. On Linux, as root:
+   Validates the URL, writes it and restarts the service. On Linux, as root:
    ```bash
    sudo posturermm-agent config set server.url https://posturermm.example.com
    ```
-   It writes `ServerUrl` into `agent.conf`, keeping every other line, and
-   restarts `posturermm-agent`.
+
+   ```bash
+   # A server or proxy with a different CA also needs its pin. It outranks
+   # the CA stored from the old server: at its next start the agent re-anchors
+   # on the CA in the server's chain, only if it matches the pin. If the server
+   # is down then, it retries every five minutes once a connection fails the
+   # certificate check. With tamper protection on, restart the service yourself.
+   posturermm-agent config set server.pin <CA fingerprint>
+   ```
 
 2. **Fleet-wide (SCCM / Intune / GPO)** — push an explicit reinstall:
    ```cmd
-   msiexec /x posturermm-agent.msi /qn
+   msiexec /x posturermm-agent.msi /qn          # add TAMPERPASSWORD=… if protection is on
    msiexec /i posturermm-agent.msi SERVERURL=https://new-host.example.com /qn
    ```
-   A command-line `SERVERURL=` always wins, on upgrade as on fresh install; omit
-   it and the MSI recovers the operator's existing value rather than stranding
-   the agent. On Linux, run the new server's one-liner: it re-writes the server
+   A command-line `SERVERURL=` always wins; omit it and the MSI keeps the
+   existing value. On Linux, run the new server's one-liner: it re-writes the server
    settings in `agent.conf` and restarts the agent.
 
 ## Operations
@@ -342,6 +366,10 @@ docker compose logs -f bastion
 # Console access log: one JSON line per console/API request (who, which route,
 # status, latency), under target "access". Route templates only, never a URL.
 docker compose logs backend | grep '"target":"access"'
+
+# The same lines are kept on the data volume, one file per UTC day, 90 days or
+# 500 MB, so they survive `docker compose up --force-recreate`. Read them in place:
+docker compose exec backend sh -c 'ls /app/data/logs; tail -n 20 /app/data/logs/access.*.jsonl'
 
 # Restart a single service
 docker compose restart backend
@@ -357,8 +385,9 @@ compose file).
 
 **Back up first** ([Backup & Restore](#backup--restore)): migrations cannot be
 undone. Then follow the [quickstart](quickstart.md#upgrade); `up -d`
-runs db-setup first, creating the [database roles](configuration.md#your-own-postgresql).
-A release needing a manual step stops the backend at start and prints the recipe.
+creates the [database roles](configuration.md#your-own-postgresql).
+The [release notes](release-notes.md) cover skipped versions; a manual step stops the
+backend at start and prints the recipe.
 
 ### Verifying a release
 
@@ -431,8 +460,8 @@ With `POSTURERMM_TLS__ENABLED=false` the single `:3000` listener carries
 
 ### The backend turns PostgreSQL's JIT off
 
-Every pooled connection runs `SET jit = off` (so a `psql` shell still reports
-`on`), against your own PostgreSQL too. JIT was the only variable here:
+Every pooled connection runs `SET jit = off` (a `psql` shell still reports `on`),
+against your own PostgreSQL too. JIT was the only variable:
 
 | query | with JIT | without |
 |---|---|---|
@@ -453,14 +482,12 @@ the same scheduler job:
 | Posture snapshot | 365 days | Daily per-endpoint posture score, feeds fleet sparklines. Same shape and growth rate as the compliance snapshot, and the same default window: **upgrading an existing deployment begins pruning rows older than 365 days immediately**. There is no unlimited option for this window. |
 | Audit log | **0 (keep forever)** | The one window that defaults to unlimited, and the only one of the four with an unlimited option at all, so upgrading never starts deleting an existing operator's history on its own. Set a positive number of days to opt into pruning. |
 
-The first three accept 30–3650 days; audit-log retention accepts 0–3650. Pruning
+The first three take 30–3650 days; audit-log retention accepts 0–3650. Pruning
 runs in bounded batches, and pruning the audit log writes one more audit row
 (`audit_log_prune`) naming the row count and the cutoff. Rows a configured audit
-sink has not yet received are never pruned; the run logs how many.
-
-A run that cannot read all four windows prunes nothing and logs the key at
-fault, rather than falling back to the defaults. Save a real number and the next
-daily run recovers.
+sink has not yet received are never pruned; the run logs how many. A run that
+cannot read all four windows prunes nothing and logs the key at fault, not
+falling back to the defaults; save a real number and the next run recovers.
 
 Three telemetry histories are pruned hourly on fixed windows you do not set:
 performance metrics and endpoint reachability at **30 days**, disk SMART history
@@ -589,7 +616,7 @@ waited and nothing has been sent for 30 minutes.
 
 - [x] TLS termination by the backend itself
 - [x] The backend publishes 80/443 only; its `:3000` plane, the DB and the Bastion stay on the internal Docker network
-- [x] The backend makes zero outbound internet connections — the Bastion is the only internet-facing component
+- [x] The backend connects out only to configured destinations (alerts, SSO, LDAP, syslog), never to PostureRMM
 - [x] JWT signing secret auto-provisioned to `posturermm-data` volume (or externally supplied via `JWT_SECRET`, 32+ chars)
 - [x] Keyless enrollment waits in the approval queue; install keys are the opt-in unattended lane
 - [x] TOTP 2FA mandatory for every password sign-in (SSO: the IdP's MFA)

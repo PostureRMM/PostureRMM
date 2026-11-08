@@ -15,8 +15,39 @@ from one console, on your own hardware, with your fleet data never leaving it.
 </div>
 
 <div align="center">
-<img src="./docs/screenshots/dashboard.png" alt="PostureRMM dashboard" width="900" />
+<img src="./docs/screenshots/dashboard.png" alt="PostureRMM dashboard: the Posture Score and its three pillars, Prevention, Patching and Performance" width="900" />
 </div>
+
+---
+
+## See it
+
+Every screen below is the product running against a demo fleet of 25 endpoints: made-up
+hostnames, real public CVEs, nothing from a real network.
+
+**The fleet.** One score per endpoint for each pillar, and reachability history beside it.
+
+<img src="./docs/screenshots/fleet.png" alt="The Endpoints list: 25 Windows and Linux endpoints with Prevention, Patching, Performance and Posture scores and reachability" width="900" />
+
+**One device.** Why its score is what it is, what it is doing now, and what needs attention first.
+
+<img src="./docs/screenshots/device.png" alt="A Windows Server 2016 file server with a critical posture score, a nearly full system disk and actively exploited CVEs open" width="900" />
+
+**Benchmarks.** A verdict per benchmark across the fleet: "Passes" with the count of automated rules, or the number of gaps, and "Fix gaps" where an authored fix exists.
+
+<img src="./docs/screenshots/benchmarks.png" alt="The Benchmarks page: DISA STIG verdicts for Windows, Linux and the browsers, some passing every automated rule and some with gaps" width="900" />
+
+**Vulnerabilities.** CVEs matched to what is installed, with CVSS, EPSS and CISA KEV beside each, and how much of the fleet each one reaches.
+
+<img src="./docs/screenshots/vulnerabilities.png" alt="The Vulnerabilities page: open CVEs matched to installed software, with KEV markers, CVSS, EPSS, risk and how many endpoints each reaches" width="900" />
+
+**Deploying the fix.** A deployment for a CVE names the endpoints that need it and lists the Windows updates in the order they install.
+
+<img src="./docs/screenshots/deploy.png" alt="The Deploy page for one CVE: seven endpoints, and the plan listing five Windows updates in install order" width="900" />
+
+**The Bastion.** When it last synced, when it syncs next, and how often, and what it holds for the fleet. With the door shut, requests wait and go out the next time it opens.
+
+<img src="./docs/screenshots/bastion.png" alt="The Bastion page: working, with the last and next sync times, a sync interval setting, and a package cache of app installers and Windows updates" width="900" />
 
 ---
 
@@ -29,8 +60,8 @@ rather than reporting the API call as a success.
 | Area | Capabilities |
 |---|---|
 | **Compliance** | Audit Windows and Linux servers against DISA STIG, Microsoft Security Baselines and a curated hardening profile. Failing checks carry authored fixes that apply per-endpoint, per-check across the fleet, or as "apply all safe fixes" — behind a safety gate that refuses anything which would cut your own access. Every fix is verified by re-running the check, and every fix is revertible, because each executor captures the state it overwrote. |
-| **Patching** | Windows updates scanned **offline** against Microsoft's own applicability engine — no internet needed on the endpoint or the server. Linux package updates from the distribution's own advisories, installed from packages your own server carries. Third-party app updates from a curated catalogue. CVE correlation across NVD, EPSS, MSRC, CISA KEV and GHSA with version-range-aware matching. Deployment policies with canary pauses, maintenance windows and an optional supply-chain bake period. |
-| **Software** | Curated app catalogue with one-click install and uninstall, custom `.msi`/`.exe`/`.msix` upload, registry-verified installs with exit-code classification and tiered retry, full software inventory on Windows and Linux, and an application blocklist for rival agents and unapproved remote-access tools. |
+| **Patching** | Windows updates scanned **offline** against Microsoft's own applicability engine — no internet needed on the endpoint or the server. Linux package updates from the distribution's own advisories, installed from packages your own server carries. Third-party app updates from a curated catalog. CVE correlation across NVD, EPSS, MSRC, CISA KEV and GHSA with version-range-aware matching. Deployment policies with canary pauses, maintenance windows and an optional supply-chain bake period. |
+| **Software** | Curated app catalog with one-click install and uninstall, custom `.msi`/`.exe`/`.msix` upload, registry-verified installs with exit-code classification and tiered retry, full software inventory on Windows and Linux, and an application blocklist for rival agents and unapproved remote-access tools. |
 | **Remote access** | Browser-based remote desktop (Windows), a real terminal, file browse/upload/download, and PowerShell, `sh` or `bash` execution with an approval workflow and live output — no separate tool, no separate agent. |
 | **Fleet** | Rule-based dynamic groups, ARP network discovery for unmanaged devices, hardware and disk-health inventory, per-endpoint reachability history, maintenance windows, reboot policies with end-user deferral, alerting over webhook and email with delivery health you can see, and custom monitors that run on the agent and alert through the same channels. |
 | **Access & audit** | OIDC single sign-on, five-role RBAC with group scoping, TOTP 2FA, scoped API keys, an audit trail you can forward off-host over TLS syslog, escrowed BitLocker recovery keys and local administrator passwords, a multi-tenant data model, and a read-only "view as" lens so you can check RBAC is what you think it is. |
@@ -75,11 +106,11 @@ Checks are YAML, not code. So is every posture rule. You can read them, and so c
 
 **The product runs with no internet at all.** Enrollment, compliance scanning, remediation, patch
 installation, software deployment, remote desktop, reporting — all of it happens on your network. Your
-endpoints never reach out. Neither does the backend. Even Windows Update scanning is done offline,
+endpoints never reach out. The backend connects out only to destinations you configure: your alert channels (webhook, Slack, Teams, Discord, Mattermost, ntfy, email, PSA), SSO or LDAP server and audit-log sink, never to us. Even Windows Update scanning is done offline,
 against Microsoft's own applicability engine, so an endpoint never contacts Microsoft either.
 
 The internet buys exactly one thing: **fresh content.** New CVEs, patch payloads, updated
-compliance baselines, the app catalogue. That arrives by *hydration* — a single component, the
+compliance baselines, the app catalog. That arrives by *hydration* — a single component, the
 Bastion, pulls from a static feed on Cloudflare R2 on a schedule you set. Open egress for a
 maintenance window, let it fill up, close it again. Anything the backend asks for while the door
 is shut queues durably and drains the moment it opens, with no operator action and nothing to
@@ -107,11 +138,11 @@ from us**, and cannot be reached by us at all.
                   │ HTTPS, outbound only, on your schedule
 ┌─────────────────┼───────────────────────────────────────────┐
 │ YOUR NETWORK    ▼                                           │
-│   Bastion (Rust) ── the only component that reaches out     │
+│   Bastion (Rust) ── the only component that reaches us      │
 │      │                                                      │
 │      ▼                                                      │
 │   Backend (Rust) ── TLS edge, API, admin UI, scheduler      │
-│      │              zero outbound internet                  │
+│      │              outbound: only what you configure       │
 │      ├── PostgreSQL                                         │
 │      └── Agents (Rust) ── Windows or Linux, no runtime deps │
 └─────────────────────────────────────────────────────────────┘
@@ -122,6 +153,28 @@ once a month and your fleet stays current as far back as your last sync. Both ar
 neither is a degraded mode.
 
 There is no cloud version to migrate you to.
+
+## Minimum specs
+
+| | Server (backend and database) | Bastion |
+|---|---|---|
+| **CPU** | 2 vCPU | 1 vCPU |
+| **RAM** | 4 GB | 1 GB |
+| **Disk** | 10 GB free to install; plan 40 GB if you will deploy software and patches | 10 GB free; its package cache is capped at 50 GB by default and holds only what you ask for |
+| **OS** | Linux x86-64, or Windows 10 or 11 with Docker Desktop | The same, or any Linux host that can run a container |
+| **Runtime** | Docker Engine 20.10+ with Compose v2, or Podman 5+ as root | The same |
+
+By default the Bastion runs beside the server on the same host, so one 2 vCPU, 4 GB machine
+covers both. `preflight.sh` installs a container runtime for you on Debian, Ubuntu, RHEL, Rocky
+and AlmaLinux. Windows Server cannot host the server; Windows Server stays a supported endpoint.
+
+What these numbers rest on: a demo fleet of nine endpoints on a development build of the
+backend. The backend used about 170 MB of RAM idle and 230 MB at its peak, and no measurable CPU
+when idle. The database was 37 MB, about 0.3 MB of it compliance results per endpoint. The images
+download at about 330 MB (backend 120 MB, Bastion 40 MB, PostgreSQL 170 MB). An idle Bastion held
+8 MB. A development build is not the released image, so read these as indicative. We have not yet
+measured a fleet near the 50-endpoint cap or a Bastion in the middle of a sync, so the table
+leaves generous headroom for both.
 
 ## Quick Start
 
@@ -160,7 +213,7 @@ docker compose up -d
 ```
 
 Agents upgrade themselves once the server has the new agent, wherever an upgrade policy covers them.
-What changed and any manual step: the [release page](https://github.com/PostureRMM/PostureRMM/releases/latest).
+What changed and any manual step, for every release you are skipping: the [release notes](docs/release-notes.md).
 
 ## Configuration
 

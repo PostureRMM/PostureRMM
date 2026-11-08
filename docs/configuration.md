@@ -64,7 +64,7 @@ CA. Drop both files or neither: a half-populated volume is an error at start, de
 
 ## The Bastion and the content feed
 
-The Bastion is the only container that reaches the internet. It has no configuration file to create
+The Bastion is the only container that reaches the PostureRMM feed (the backend connects out only to destinations you configure, such as alert channels). It has no configuration file to create
 and nothing is mounted into it — it runs on its built-in defaults and takes the overrides below. A
 TOML file works too if you prefer one, mounted at `/app/config/bastion.toml`, but no install needs
 one.
@@ -104,6 +104,8 @@ Two values are required there, and the compose file refuses to start without eit
 | `POSTURERMM_AUTH__REMOTE_SESSION_REAUTH_INTERVAL_SECS` | `20` | How often an **already-open** remote session — terminal, RDP, screen share, file transfer, live script output — re-checks that the operator driving it is still authorized. Deactivating a user also tears their live sessions down immediately, so this is the worst-case window for a session that raced that sweep, and the mechanism behind revocations with no push door: deletion, demotion, organization deactivation. Costs one indexed lookup per live socket per tick. |
 | `POSTURERMM_CREDENTIAL_KEY` | unset | Stored credentials (the ones saved for network scans and remote access) work out of the box: they are encrypted under a key derived from `totp-secret` in the `posturermm-data` volume. Set this only if an earlier release had you set it: when present it is still used, and the log says so. Exactly 64 hexadecimal characters. |
 | `LOG_LEVEL` | `info` | Server log level: `trace`, `debug`, `info`, `warn` or `error`. |
+| `POSTURERMM_LOGGING__ACCESS_LOG_MAX_MB` | `500` | Size cap of the on-disk access log in `posturermm-data` (`/app/data/logs/access.YYYY-MM-DD.jsonl`, one file per UTC day). The oldest day goes first. `0` turns the file off; the lines still go to the container log. Written at `LOG_LEVEL` `info` or lower. |
+| `POSTURERMM_LOGGING__ACCESS_LOG_RETENTION_DAYS` | `90` | Days of access log kept. Whichever of this and the size cap is reached first applies. The lines hold client IPs and user emails, so lower it if you need them gone sooner. `0` turns the file off. |
 | `RUST_LOG` | `info` | Bastion log level. Takes a level, or per-module directives such as `info,posturermm_bastion=debug`. |
 
 Do not add or change `POSTURERMM_CREDENTIAL_KEY` once credentials are stored: values are sealed
