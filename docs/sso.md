@@ -182,3 +182,85 @@ PostureRMM redirect URI and scopes `openid email profile`.
   **IdP CA certificate**. It is trusted in addition to the public CAs, and a
   save is refused if it holds no valid certificate. Leave it blank otherwise.
   There is no option to skip certificate verification.
+
+## Provision users and groups with SCIM
+
+SSO signs people in. SCIM makes the provider create their accounts and groups
+ahead of time, and deactivate them when they leave, with no one touching
+PostureRMM. It is free on every install and inbound only: the provider calls
+PostureRMM, which never calls out.
+
+1. In **Settings → User provisioning** (`/settings/scim`, SuperAdmin) choose
+   **Generate token**, copy it (it is shown once; only a hash is stored), tick
+   **Enable user provisioning** and save. **Rotate token** replaces it and the
+   old one stops working at once.
+2. At the provider, use the **SCIM base URL** shown on that page
+   (`<public URL>/scim/v2`) as the tenant URL and the token as the secret
+   (bearer). In Entra ID this is an enterprise application's Provisioning →
+   Automatic; in Okta, an application's Provisioning → SCIM 2.0 with
+   HTTP Header authentication.
+3. Push users with `userName` set to their email address, and push the groups
+   that should grant access. **A group's name decides the role**, exactly as in
+   **Map groups to roles** above: a mapping row names the group, and so does its
+   `externalId` (Entra's object id, which is what its tokens carry). The first
+   matching row sets the role and every matching row adds its permissions, as at
+   sign-in, but at once and on every membership change. A person in no mapped
+   group gets the auto-provision role, or read-only if SSO is not set up.
+
+What it does and does not do:
+
+- **Deactivating** a user (Entra's `active: false`, or a delete) disables the
+  account and revokes its sessions and API keys immediately. Reactivating turns
+  the account on; the old credentials stay revoked.
+- A person who already has an account is **matched by email** inside the
+  organization and adopted, never duplicated. Their first sign-in through your
+  OIDC provider uses the same account.
+- **Super Admin accounts are never created, changed or deactivated** by the
+  provider, and no group can grant the role.
+- Supported: Users and Groups with create, read, filter on `userName`,
+  `externalId` or `displayName`, replace, patch and delete. Bulk, sort,
+  password changes and the `.search` form answer 501.
+
+## Sign in with Active Directory or LDAP
+
+For a site with no OIDC provider. People type their directory name and
+password; the directory checks the password and PostureRMM maps their groups to a
+role through the same rows as **Map groups to roles** above. It is free on every
+install and stays on your network: PostureRMM connects to your domain controller
+and nothing else.
+
+1. Create a **read-only service account** in the directory. It only looks users
+   and groups up.
+2. In **Settings → Directory sign-in** (`/settings/ldap`, SuperAdmin) enter the
+   domain controller, port (636 for LDAPS, 389 for StartTLS), base DN, the
+   service account's DN and password. Plain-text LDAP is not offered, and the
+   domain controller's certificate is always verified. If it was issued by an
+   internal CA, paste that CA's certificate (PEM); with a CA set, only that CA is
+   trusted. The certificate must name the host you typed.
+3. **Test connection** runs the real connection with the boxes' values and
+   saves nothing. It reports whether the host answered, the certificate was
+   trusted, the service account bound and the base DN was readable.
+4. Add mapping rows. Name a group by its name (`PMM-Operators`) or its full DN;
+   case does not matter. A user belongs to a group **through any depth of
+   nesting**: if `Helpdesk` is inside `PMM-Operators`, its members match a row
+   for `PMM-Operators`. The first matching row sets the role, every matching row
+   adds its permissions, and no row can grant Super Admin.
+5. Tick **Enable directory sign-in**. The login page gains a **Sign in with**
+   link that opens the directory form (`/login?method=directory`); the local
+   form and the OIDC button stay.
+
+How it behaves:
+
+- Users type their `sAMAccountName`, `DOMAIN\name` or UPN.
+- **Two-factor authentication still applies.** A directory sign-in is a password
+  sign-in, so a user without an authenticator enrols one first.
+- A directory user is matched to an existing PostureRMM user by **mail address**
+  inside the organization, or created if you tick **Create a PostureRMM user on
+  first sign-in** (which needs allowed email domains). The link then follows the
+  account's object GUID, so a rename in the directory does not orphan it.
+- Failures read "Invalid username or password." in the browser whatever the
+  cause; the reason (`ldap_tls_failed`, `ldap_user_not_found`, ...) is in the
+  audit log and the server log.
+- Only one organization can have directory sign-in enabled at a time.
+- Kerberos single sign-on (no password prompt on a domain-joined PC) is not
+  supported.
