@@ -37,6 +37,10 @@ hostnames, real public CVEs, nothing from a real network.
 
 <img src="./docs/screenshots/benchmarks.png" alt="The Benchmarks page: DISA STIG verdicts for Windows, Linux and the browsers, some passing every automated rule and some with gaps" width="900" />
 
+**Software.** Every application the fleet has installed, how many endpoints run it, whether a newer version is ready, and the CVEs it carries.
+
+<img src="./docs/screenshots/software.png" alt="The Software page: installed applications with their icons, fleet footprint, update status, CVE and KEV counts, and an update action per row" width="900" />
+
 **Vulnerabilities.** CVEs matched to what is installed, with CVSS, EPSS and CISA KEV beside each, and how much of the fleet each one reaches.
 
 <img src="./docs/screenshots/vulnerabilities.png" alt="The Vulnerabilities page: open CVEs matched to installed software, with KEV markers, CVSS, EPSS, risk and how many endpoints each reaches" width="900" />
