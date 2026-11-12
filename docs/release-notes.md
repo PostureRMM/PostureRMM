@@ -2,7 +2,68 @@
 
 What changed in every release, newest first. The hub keeps only the newest release's files, so upgrade to it directly; the notes of earlier releases stay on this page. To upgrade, follow the [upgrade steps](../README.md#upgrade).
 
-Jump to: [1.31.0](#v1.31.0) · [1.30.0](#v1.30.0) · [1.29.0](#v1.29.0) · [1.28.1](#v1.28.1) · [1.28.0](#v1.28.0)
+Jump to: [1.32.0](#v1.32.0) · [1.31.0](#v1.31.0) · [1.30.0](#v1.30.0) · [1.29.0](#v1.29.0) · [1.28.1](#v1.28.1) · [1.28.0](#v1.28.0)
+
+<a id="v1.32.0"></a>
+
+## Version 1.32.0
+
+Connect an AI client to PostureRMM, automate most of the console over the API, see how every posture score is built, and get a smoother first install and a clearer tray portal.
+
+### Upgrading
+
+Back up first, because database migrations cannot be undone. Then, in the folder holding your `docker-compose.yml`:
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+There are no manual steps. The first start can take a minute or two on a large vulnerability history. Agents upgrade through your upgrade policy, and nothing needs forcing. Upgrade your agents promptly: the tray portal changes, the clean Windows stop, the kept Windows Update catalogue and the repaired feature list need an agent on this version.
+
+If a script or AI client that uses Python 3.13 or newer refuses your install's certificate, see the optional step under Worth knowing.
+
+### New
+
+- **Connect an AI client.** PostureRMM answers the Model Context Protocol at `/mcp`, so an AI client such as Claude Code can read your fleet: posture, endpoints, vulnerabilities, compliance, alerts, changes and the audit log. There is nothing to install, and it works with no internet. Make a key under My account → API access. By default it can only look. A second key made with Allow AI writes can scan, apply safe fixes, cancel, stop or revert a Change, release or abort a canary, restart a service, tag endpoints and approve or reject a waiting computer, always within the key's role and groups. Revealing a stored credential, deleting an endpoint, managing users, Organizations or API keys, and security settings are never offered to an AI client. The guide is Connect an AI client.
+- **Most console actions now have a documented API route.** Device actions, reverting or stopping a Change, enrollment approvals, groups and proxies, policies and maintenance windows, patch baselines, custom apps, the app catalog's icons and bulk enable, tags, property definitions, the script library and its approvals, alert rules, monitors, notification channels, messages, invitations, reports, network discovery, Bastion settings, licence sync, install keys, user permissions, stored credential rotation, scoring, retention and brand settings, and Organization delete can all be driven by a key. Creating a Change takes an `Idempotency-Key`, so a retried call never dispatches twice. Every key call now records its outcome (succeeded, refused or failed) in the audit log, and a refusal says why. Security settings stay in the console. Anything that runs code on your endpoints, such as scripts and installer uploads, is never offered to an AI client either.
+- **Posture scores show their working.** Each pillar's coverage sits beside its score, and a line on the dashboard says how the score is built. Prevention weighs checks by severity (high 50%, medium 35%, low 15%). Patching and Performance count each fact once, with partial credit where a measurement has several thresholds, so one problem no longer fails several rules. A CVE with no fix is labelled "No fix available". The letter grade is gone from the console.
+- **See and fix end-of-life apps on a device.** The device's Patching tab lists every end-of-life app with its end date, the supported line, whether that line is already installed, what the rule costs the device in Patching points, and Install or Uninstall buttons.
+- **A tray portal that matches the console.** It uses the dashboard's score card, buttons and tables, draws a 7-day posture trend and shows each app's own icon on update rows. Check in, Run scan and Restart agent say what happened ("Checked in 20:41", "Just ran. Try again at 20:43"). When an update had to wait for a program you closed, the toast says it is installing, and the Updated toast offers Reopen for that program.
+- **The server's certificate renews itself.** The generated certificate is checked daily and replaced, with the same CA and no restart, once fewer than 60 days remain, so an install left running for years never goes dark. Agents notice nothing. If you brought your own certificate, a banner warns Super Admins in the last 30 days.
+- **A smoother first install.** A keyless endpoint waiting for approval now shows on Endpoints, the dashboard and the Install page, and notices approval in about 20 seconds instead of up to 5 minutes. The first feed sync starts at once and brings the compliance content first, so Prevention no longer waits behind the vulnerability data. The first-run button installs the first endpoint, a Linux endpoint shows its real distribution while it waits, and the Windows installer script checks Docker Desktop's memory and turns on start-at-sign-in.
+- **New app versions reach the feed within the hour.** Winget updates are collected hourly instead of nightly. Your Bastion's sync interval decides when they reach you.
+
+### Fixed
+
+- **A second, different script sent to the same device within seconds was silently dropped**, while you were told it was queued. Tasks are now told apart by what they carry, so a different script or different reboot arguments is queued, and a double click still yields one task.
+- **The Bastion's "Auto pre-cache" switch did nothing.** Turned off, the Bastion stops pre-caching recommended apps automatically and keeps the cache as it is, instead of letting it age out a week later. Allow again, Retry all pending and the apps a deploy needs still fetch. The switch is on the API too.
+- **Schedules created on the Schedules tab never ran.** They run now, and schedules already stored with no next run are given their next occurrence on upgrade, without all firing at once.
+- **A group-limited account could reach beyond its groups.** Approving an enrollment, moving an endpoint, approving a reinstall and sending a message to "all" now stay inside the groups the person is assigned to, and the refusal says so.
+- **A renamed or moved group kept its old path, and a group switched to static could refill itself.** The path and everything under it update with the change, and a late evaluation no longer adds members.
+- **A new endpoint raised dozens of critical-vulnerability alerts within a minute.** Its first scan is now one alert, "N critical CVEs, K on KEV", linking to that endpoint's Critical vulnerabilities. Later CVEs still alert one by one.
+- **An endpoint nothing had measured counted as fine.** It reads "Not yet measured", and the dashboard's empty score spread names what it is waiting for.
+- **Windows 10 and 11 PCs were scored on checks written for servers, and a fully scanned PC could read about 21% coverage.** Prevention counts only checks for the endpoint's own platform.
+- **A third-party app on an older release line read as outdated.** Java 17 is compared with the newest Java 17, and a .NET 8 install that is end of life no longer fails twice.
+- **Pinned per-user app copies were counted current while the device listed them behind.** The baseline view and the device now agree.
+- **A stopped Windows Time service on a standalone PC failed the time rule.** A trigger-start service that synced recently is healthy.
+- **Stopping the Windows agent logged an error and reported a failed exit.** Stop always finishes its drain and exits cleanly, and a reboot gets the same grace.
+- **The Windows agent fetched its offline Windows Update catalogue (about 680 MB) again every day.** It is kept and reused, and an upgrade keeps the copy an older agent left.
+- **A failed Windows features query wiped the device's feature list**, and feature-policy drift read Unknown until the next good collection. The last list is kept.
+- **The agent log was noisy and unhelpful.** Probing the control pipe and a long outage no longer flood it, an announced restart is not a warning, and it says when the live connection is up, down or restored and what a deferred task is waiting for. Each signed-in user's tray logs to its own file.
+- **`msiexec /x` failed on an agent with tamper protection off**, and an agent moved to a new server could be refused for good because of the old server's install key. Both work now, on Windows and Linux.
+- **Message counts lost people as they answered, and pressing OK was not counted.** Recipients, Delivered, Dismissed and Clicked now read as a funnel.
+- **Scores were printed on different scales.** The All Organizations leaderboard and the evidence pack print out of 100, and every score surface uses the same bands and rounding.
+- **Large fleets were slow on the Vulnerabilities, Software, Changes and report pages.** They load faster.
+
+### Worth knowing
+
+- **Scores can move on upgrade without anything changing on your fleet.** The scoring model changed. Trend lines and 7-day changes that cross the change are withheld, and say so ("Scoring model updated to v10 on a date"). The coverage figure beside each pillar score on the Endpoints list is gone. It remains on the dashboard, the pillar pages and a device's own page.
+- **Only Super Admins can change scoring weights, health bands and the self-service opt-in.** A group-limited Admin's Save is greyed out with the reason, in the console and over the API.
+- **A group-limited Admin can no longer change network discovery.** Scan configurations and discovered devices cover the whole Organization, so creating, editing, deleting and scanning need an Admin who is not limited to groups. Helpdesk users see only network devices whose probe is in their groups.
+- **A scheduled report runs with its owner's access as it is now.** If the owner was removed or disabled, it sends nothing and shows Failed with the reason. If the owner was demoted to Helpdesk, it covers only what that person can read. Create the report again under an account that should own it.
+- **Optional: strict clients and an existing certificate.** A certificate this install generated before this release lacks an identifier that Python 3.13 and newer require, so those clients refuse it even with the CA trusted. A new install has it, and so does any certificate minted from now on. To re-mint yours now, follow "Reissuing the generated certificate" in the configuration guide. Enrolled agents keep working. Skip it if no strict client connects.
+- **A Windows PC is for trying PostureRMM.** The server runs only while someone is signed in with Docker Desktop running. Put a server you leave unattended on Linux, or in a small Linux VM on Hyper-V.
+- **Several features need the agent on this version:** the tray portal changes, the clean Windows stop, the kept catalogue, the repaired feature list and the improved Windows Time verdict. Until then the device behaves as before.
 
 <a id="v1.31.0"></a>
 

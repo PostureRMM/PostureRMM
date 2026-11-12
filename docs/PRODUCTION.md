@@ -4,8 +4,9 @@
 Each release publishes it there — deploy/release/check-public-docs.sh. -->
 
 [quickstart.md](quickstart.md) installs the stack,
-[configuration.md](configuration.md) lists settings and
-[sso.md](sso.md) sets up single sign-on. The rest is the runbook.
+[configuration.md](configuration.md) lists settings,
+[sso.md](sso.md) sets up single sign-on and [mcp.md](mcp.md) connects an AI
+client.
 
 ## Architecture
 
@@ -92,8 +93,8 @@ the agent, not the relay.
 
 ## Bastion in a DMZ
 
-By default the Bastion runs beside the backend at `http://bastion:8300`, sharing
-a bearer secret the backend generates on first boot; nothing to do.
+By default the Bastion runs beside the backend at `http://bastion:8300` and shares
+a bearer secret the backend generates on first boot.
 
 For a split topology (Bastion on a DMZ host, backend/db/admin UI in the
 protected zone) the hosts cannot share that volume. Generate one secret with
@@ -111,8 +112,8 @@ protected zone) the hosts cannot share that volume. Generate one secret with
    docker compose -f docker-compose.bastion.yml up -d
    docker compose -f docker-compose.bastion.yml ps   # healthy after ~30 s
    ```
-2. **On the protected-zone host** — leave `docker-compose.yml` as-is and set
-   both values in `.env`:
+2. **On the protected-zone host** — leave `docker-compose.yml` as-is; set
+   both in `.env`:
    ```bash
    POSTURERMM_BASTION__URL=https://bastion.dmz.example:8443
    POSTURERMM_BASTION__SECRET=<the-same-generated-64-character-hex-value>
@@ -145,7 +146,8 @@ protected zone) the hosts cannot share that volume. Generate one secret with
    | `contacted` | a feed fetch has succeeded; `last_success_seconds_ago` says how long ago |
    | `not_yet_contacted` | an identity exists but nothing has succeeded yet — the normal reading behind a closed maintenance window, and not an alarm |
    | `rejected` | the feed refused the identity; `last_attempt_status` carries the `401`/`403` |
-   | `misconfigured` | no identity from any source and no successful contact ever — set `POSTURERMM_FEED__DEPLOYMENT_ID` from the backend's boot log |
+   | `awaiting_first_request` | no identity configured and no request has arrived yet. A co-located Bastion learns its identity from the backend's first pull, so a fresh install reads this for its first seconds; not an alarm |
+| `misconfigured` | a request arrived with no identity from any source and nothing has succeeded — set `POSTURERMM_FEED__DEPLOYMENT_ID` from the backend's boot log |
 
 5. **Firewall** — protected zone → DMZ, outbound only, to the port the Bastion
    (or its reverse proxy) listens on. No inbound rule from the DMZ is required or
@@ -163,14 +165,14 @@ A SuperAdmin sets the sync interval on System health → Bastion: 15 minutes to 
 ## Proxy container
 
 A proxy is optional and exists for **segmented networks**: agents that cannot
-reach the backend directly point at a proxy in their own segment, which relays
+reach the backend point at a proxy in their own segment, which relays
 for them and caches downloads. It ships as the release download
 `docker-compose.proxy.yml`, also in the offline bundle with its image.
 
 ### Registering it
 
-1. In the admin UI, **Proxies → New**. Copy the ID, the one-shot secret and,
-   on a self-signed server, the server CA fingerprint.
+1. In the admin UI, **Proxies → New** (or `POST /api/v1/proxies`). Copy the ID,
+   the one-shot secret and, on a self-signed server, the server CA fingerprint.
 2. On a Docker host in the segment, fetch it and write `.env` beside it:
 
 ```bash
@@ -187,9 +189,9 @@ docker compose -f docker-compose.proxy.yml up -d
 
 3. Point that segment's agents at `https://<proxy-host>:8443`, the host named
    in `POSTURERMM_PROXY_TLS_HOSTNAME`. The proxy injects `X-Forwarded-For` and `X-Proxy-ID`, so the audit
-   log still records the real endpoint — provided
+   log records the real endpoint — provided
    `POSTURERMM_SERVER__TRUSTED_PROXIES` names the proxy's address. Omit it and
-   every row from that segment shows the proxy instead.
+   every row from that segment shows the proxy.
 
 ### What works through a proxy
 
@@ -261,6 +263,12 @@ For SCCM / Intune / GPO flows, take the MSI URL and checksum from Admin UI →
 Endpoints → Install agent → More install options, pass `SERVERURL` on the
 `msiexec` command line, and drop `install-key.txt` beside the MSI.
 
+**Application control.** The Windows agent is not yet code-signed, so Smart
+App Control, or an App Control or AppLocker policy requiring signed code, can
+block the tray: the user sees *Part of this app has been blocked*, once per
+sign-in, and has no tray. Under your own policy, allow
+`C:\Program Files\PostureRMM\Agent\` by path.
+
 **The install key travels in the URL's query string** (`?key=`), the only place
 the one-line installers can take it, so a reverse proxy may log it. Revoke it
 when the rollout ends.
@@ -324,25 +332,20 @@ the device. SYSTEM can still stop it.
 
 The agent reads `ServerUrl` at boot from
 `HKLM\SOFTWARE\PostureRMM\Agent\ServerUrl` on Windows, or from
-`/etc/posturermm/agent.conf` on Linux, and ignores TOML and env. Change it
-one of two ways:
+`/etc/posturermm/agent.conf` on Linux. Change it one of two ways:
 
-1. **Per-machine** — elevated PowerShell on the endpoint:
+1. **Per-machine** — elevated PowerShell prompt:
    ```powershell
    posturermm-agent.exe config set server.url https://posturermm.example.com
-   posturermm-agent.exe config get     # sanity check
    ```
-   Validates the URL, writes it and restarts the service. On Linux, as root:
+   On Linux, as root:
    ```bash
    sudo posturermm-agent config set server.url https://posturermm.example.com
    ```
 
    ```bash
-   # A server or proxy with a different CA also needs its pin. It outranks
-   # the CA stored from the old server: at its next start the agent re-anchors
-   # on the CA in the server's chain, only if it matches the pin. If the server
-   # is down then, it retries every five minutes once a connection fails the
-   # certificate check. With tamper protection on, restart the service yourself.
+   # A different CA also needs its pin. With tamper protection on, restart
+   # the service yourself.
    posturermm-agent config set server.pin <CA fingerprint>
    ```
 
@@ -351,9 +354,12 @@ one of two ways:
    msiexec /x posturermm-agent.msi /qn          # add TAMPERPASSWORD=… if protection is on
    msiexec /i posturermm-agent.msi SERVERURL=https://new-host.example.com /qn
    ```
-   A command-line `SERVERURL=` always wins; omit it and the MSI keeps the
-   existing value. On Linux, run the new server's one-liner: it re-writes the server
-   settings in `agent.conf` and restarts the agent.
+   `SERVERURL=` always wins; omitted, the existing value stays. On Linux, the new server's one-liner
+   re-writes `agent.conf` and restarts the agent.
+
+   **To a different installation (Windows or Linux):** run its install command; the
+   agent drops the old credentials and enrolls here. With tamper protection
+   on, run `manage pre-uninstall` first.
 
 ## Operations
 
@@ -378,8 +384,7 @@ docker compose restart backend
 docker compose exec db psql -U posturermm posturermm
 ```
 
-**Container logs are capped** at four 25 MB files per container (`x-logging` in each
-compose file).
+**Container logs are capped** at four 25 MB files per container (`x-logging`).
 
 ### Upgrading
 
@@ -620,7 +625,7 @@ waited and nothing has been sent for 30 minutes.
 - [x] JWT signing secret auto-provisioned to `posturermm-data` volume (or externally supplied via `JWT_SECRET`, 32+ chars)
 - [x] Keyless enrollment waits in the approval queue; install keys are the opt-in unattended lane
 - [x] TOTP 2FA mandatory for every password sign-in (SSO: the IdP's MFA)
-- [x] Audit-log source IP is trustworthy: forwarding headers are believed only from a peer named in `POSTURERMM_SERVER__TRUSTED_PROXIES` — a client cannot forge its own address into the trail
+- [x] Audit-log source IP is trustworthy: forwarding headers are believed only from a peer named in `POSTURERMM_SERVER__TRUSTED_PROXIES` — a client cannot forge its address into the trail
 - [x] Signing out revokes the session's refresh token server-side and records a `logout` event
 
 ## Backup & Restore
@@ -773,22 +778,22 @@ Then confirm an enrolled agent checks in without a reinstall.
 ## Troubleshooting
 
 - **Backend won't start:** `docker compose logs backend`. Migrations log themselves on startup.
-- **502 from your upstream proxy:** the backend is not ready; `docker compose ps` should show it `healthy` (allow 20 s).
-- **Backend not serving HTTPS:** verify the `posturermm-tls` volume is mounted and `server.crt` / `server.key` exist.
-- **UI loads blank / 404:** the backend is not serving traffic yet.
+- **502 from your upstream proxy, or a blank UI / 404:** the backend is not ready; `docker compose ps` should show it `healthy` (allow 20 s).
+- **Backend not serving HTTPS:** verify the `posturermm-tls` volume is mounted with `server.crt` and `server.key`.
+- **A Windows host is down after a restart:** Docker Desktop runs only while someone is signed in. Sign in and wait for "Engine running".
 - **Agent can't connect:** verify DNS resolution, port 443 reachable, cert valid. `POSTURERMM_SERVER__PUBLIC_URL` must match what the agent sees.
 - **Upgrades of one Windows endpoint fail with `predates signed release statements`:** re-run the [install one-liner](#agent-rollout) on it; it upgrades in place.
 - **Bastion returning 401 to the backend:** the bearer secret disagrees. Both sides must hold the same 32+ character `POSTURERMM_BASTION__SECRET` (or, unset on the Bastion, the file at `[bastion] secret_path`).
 - **Bastion returning 502 on feed pulls:** it could not reach the feed origin. Check egress from the DMZ host to `[feed] api_url` (default `https://feed.posturermm.com`) and `docker compose logs bastion`.
-- **Lost the admin password:** `/app/data/bootstrap-admin-password` is one-time — once changed, the next restart overwrites it with a note saying so. Reset from the Docker host:
+- **Lost the admin password:** `/app/data/bootstrap-admin-password` is one-time: once changed, the next restart overwrites it with a note. Reset from the Docker host:
 
   ```bash
   docker compose exec backend ./posturermm-backend reset-admin-password admin@localhost
   ```
 
-  The new password goes to your terminal's stdout, never the container log, and the next login must change it. Live sessions end; API keys survive. It is **deliberately unauthenticated** — anyone who can `docker compose exec` here can already read the JWT secret and write the `users` table — and needs the backend running.
+  The new password prints to your terminal, never the container log; the next login must change it. Live sessions end; API keys survive. It is **deliberately unauthenticated** — anyone who can `docker compose exec` here can already read the JWT secret and write the `users` table — and needs the backend running.
 
-  **Authenticator and backup codes lost too?** Add `--clear-2fa`: it deletes the account's TOTP enrolment and backup codes and writes a `totp_admin_reset` audit row. Without it, 2FA is untouched.
+  **Authenticator and backup codes lost too?** Add `--clear-2fa` to delete the account's TOTP enrolment and backup codes (audited as `totp_admin_reset`); without it, 2FA is untouched.
 
 ---
 
