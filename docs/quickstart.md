@@ -34,22 +34,43 @@ with systemd.
 mkdir posturermm && cd posturermm
 curl -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/docker-compose.yml
 curl -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/preflight.sh
-chmod +x preflight.sh && ./preflight.sh
+chmod +x preflight.sh && sudo ./preflight.sh
 ```
 
 `preflight.sh` checks the host and that ports 443 and 80 are free, generates your database password, records this host's address as
-the name agents will use to reach it, pulls the images and starts the stack. Podman runs the stack as
-root, so on a Podman host run it as `sudo ./preflight.sh`, and prefix `sudo` to the `docker`
-commands in these docs.
+the name agents will use to reach it, pulls the images and starts the stack. It needs `sudo` to install a
+runtime and to run Podman, which runs the stack as root. Prefix `sudo` to the `docker` commands in these
+docs too: the `.env` it writes is root's, and a fresh Docker install has not put your user in the `docker` group.
 
 Running it again is safe. The 10 GB free-space check applies to a first install only, not to a re-run once the images are local.
 
 ## Install on Windows
 
-For a Windows 10 or 11 PC with [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/)
-running Linux containers (the WSL 2 default), 4 GB of RAM available to it and 10 GB free. If Docker
-Desktop reports WSL missing or out of date, run `wsl --install` (or `wsl --update`) in an administrator
-PowerShell and restart. Then, in PowerShell, no administrator prompt:
+A Windows PC is for trying PostureRMM. Docker Desktop runs only while someone is signed in, so
+after a restart (Windows Update restarts a PC overnight) the server is down until someone signs in
+and Docker Desktop, a few minutes later, reports "Engine running"; enrolled agents wait meanwhile.
+For a server that runs unattended, use a Linux host, or a small Linux VM in Hyper-V, and the Linux
+install above.
+
+**Before you start**, on a Windows 10 or 11 PC with 8 GB of RAM (Docker gives containers half of
+it by default) and 10 GB free:
+
+1. Turn on hardware virtualisation (Intel VT-x or AMD SVM Mode) in the PC's firmware settings if it is
+   off. WSL 2 needs it.
+2. Download [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/) (about
+   600 MB) and run the installer as an administrator.
+3. Keep "Use WSL 2" ticked and accept the Docker Subscription Service Agreement.
+4. Restart Windows when the installer asks.
+5. If Docker Desktop says WSL is missing or out of date, run `wsl --install --no-distribution` in an
+   administrator PowerShell and restart if it asks. Close the "Welcome to WSL" window if one opens.
+6. Open Docker Desktop from the Start menu. It does not start on its own the first time.
+7. On the "Welcome to Docker" screen, choose **Skip** (or sign in). Docker Desktop answers nothing
+   while that screen waits.
+8. Wait for "Engine running", about 3 minutes the first time.
+
+`preflight.ps1` checks these in order and, if one is missing, prints the next one. It also turns on
+Docker Desktop's "Start Docker Desktop when you sign in", so signing in brings the server back.
+Then, in PowerShell, no administrator prompt:
 
 ```powershell
 mkdir posturermm; cd posturermm
@@ -62,10 +83,18 @@ Windows Server can't host the PostureRMM server: Docker Desktop runs on Windows 
 Hyper-V and use the Linux install above; Windows Server stays a supported endpoint.
 
 `preflight.ps1` does what `preflight.sh` does, and `-ExecutionPolicy Bypass` applies to this one run
-only; nothing machine-wide changes. If another program holds port 80 or 443 (IIS often holds 80),
-it names the program. Windows then asks whether to let Docker Desktop Backend through its firewall:
-choose Allow, or other machines cannot reach the server. Log in as below, with `docker compose`
-commands run in the same folder.
+only; nothing machine-wide changes. If Docker has too little RAM it stops within seconds, before
+anything downloads, and prints the `.wslconfig` fix. If another program holds port 80 or 443 (IIS often holds 80),
+it names the program. Windows then asks whether to let Docker Desktop Backend through its firewall,
+in a window that can hide behind Docker's: choose Allow, or other machines cannot reach the server.
+If you dismissed it, `preflight.ps1` says so when it finds the block, and this administrator PowerShell
+line fixes it:
+
+```powershell
+Get-NetFirewallRule -DisplayName 'Docker Desktop Backend' | Set-NetFirewallRule -Action Allow
+```
+
+Log in as below, with `docker compose` commands run in the same folder.
 
 Docker Desktop is free for personal use, education, non-commercial open source and businesses with
 fewer than 250 employees and under $10 million in annual revenue; larger organisations need a paid
@@ -83,11 +112,18 @@ instead, which works at any time:
 docker compose exec backend cat /app/data/bootstrap-admin-password
 ```
 
+Your browser will warn that the certificate is not trusted: the server made its own on first start, and
+`preflight.sh` prints its fingerprint for you to check. To use your own certificate instead, see
+[PRODUCTION.md](PRODUCTION.md#tls-and-agent-trust).
+
+You will then choose your own password (12 characters or more) and set up an authenticator app, so have
+your phone or password manager ready and keep the backup codes it shows.
+
 This password is one-time: once you change it, the next restart replaces that file with a note
 saying so. If you lose it, [PRODUCTION.md](PRODUCTION.md#troubleshooting) has the reset command.
 
-Add your first endpoint from **Endpoints → Install first endpoint**, which
-hands you a one-line PowerShell command to run on it. For a Linux endpoint the same screen shows:
+Add your first endpoint with **Install first endpoint** (the button on an empty Dashboard, or
+under **Endpoints**), which hands you a one-line PowerShell command to run on it. For a Linux endpoint the same screen shows:
 
 ```bash
 curl -fsSL http://<host>/install-agent.sh | sudo sh
@@ -100,6 +136,12 @@ These commands carry no install key, so the endpoint arrives in the approval que
 straight into the fleet. Admit it from the same screen — or from **Pending approval** on
 **Settings → Enrollment** — and its first compliance scan finishes a few
 minutes later.
+
+To do the same without the web UI, use an API key with the Admin role:
+`GET /api/v1/enrollment-requests` lists the waiting endpoints,
+`POST /api/v1/enrollment-requests/<id>/approve` admits one (send `{}`, or a `group_id` and
+`tag_ids` to place it), and `DELETE /api/v1/enrollment-requests/<id>` discards it. **Settings → API
+reference** has the details.
 
 ## Air-gapped install
 
@@ -124,8 +166,8 @@ travels inside the bundle, so first enrollment works with no internet at any poi
 ## Upgrade
 
 **Back up first** ([how](PRODUCTION.md#backup--restore)): database migrations cannot be undone.
-Then, in the folder holding your `docker-compose.yml` (in PowerShell, `curl.exe -LO`; on a Podman
-host, `sudo` before `docker`):
+Then, in the folder holding your `docker-compose.yml` (in PowerShell, `curl.exe -LO`; on Linux,
+`sudo` before `docker`):
 
 ```bash
 curl -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/docker-compose.yml
