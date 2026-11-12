@@ -163,12 +163,12 @@ There is no cloud version to migrate you to.
 | | Server (backend and database) | Bastion |
 |---|---|---|
 | **CPU** | 2 vCPU | 1 vCPU |
-| **RAM** | 4 GB | 1 GB |
+| **RAM** | 4 GB on Linux; **8 GB on a Windows PC** (Docker Desktop gives containers half of it) | 1 GB |
 | **Disk** | 10 GB free to install; plan 40 GB if you will deploy software and patches | 10 GB free; its package cache is capped at 50 GB by default and holds only what you ask for |
-| **OS** | Linux x86-64, or Windows 10 or 11 with Docker Desktop | The same, or any Linux host that can run a container |
+| **OS** | Linux x86-64, or, to try it, Windows 10 or 11 with Docker Desktop | The same, or any Linux host that can run a container |
 | **Runtime** | Docker Engine 20.10+ with Compose v2, or Podman 5+ as root | The same |
 
-By default the Bastion runs beside the server on the same host, so one 2 vCPU, 4 GB machine
+By default the Bastion runs beside the server on the same host, so one machine with the server's specs
 covers both. `preflight.sh` installs a container runtime for you on Debian, Ubuntu, RHEL, Rocky
 and AlmaLinux. Windows Server cannot host the server; Windows Server stays a supported endpoint.
 
@@ -186,11 +186,11 @@ leaves generous headroom for both.
 mkdir posturermm && cd posturermm
 curl -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/docker-compose.yml
 curl -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/preflight.sh
-chmod +x preflight.sh && ./preflight.sh
+chmod +x preflight.sh && sudo ./preflight.sh
 ```
 
-On Windows 10 or 11 with [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/),
-in PowerShell:
+To try it on a Windows 10 or 11 PC with Docker Desktop, do the numbered steps under "Before you start" in
+**[docs/quickstart.md](docs/quickstart.md#install-on-windows)** first, then in PowerShell:
 
 ```powershell
 mkdir posturermm; cd posturermm
@@ -208,7 +208,8 @@ licence, first login and the air-gapped install: **[docs/quickstart.md](docs/qui
 ## Upgrade
 
 **Back up first** ([how](docs/PRODUCTION.md#backup--restore)): database migrations cannot be undone.
-Then, in the folder holding your `docker-compose.yml` (in PowerShell, `curl.exe -LO`):
+Then, in the folder holding your `docker-compose.yml` (in PowerShell, `curl.exe -LO`; on Linux,
+`sudo` before `docker`):
 
 ```bash
 curl -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/docker-compose.yml
