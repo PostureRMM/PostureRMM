@@ -61,6 +61,29 @@ and put `server.crt` and `server.key` into the `posturermm-tls` volume, with no 
 marker file beside them. The server leaves certificates it did not generate untouched and serves
 them as they are, and agents then validate against the platform trust store instead of the internal
 CA. Drop both files or neither: a half-populated volume is an error at start, deliberately.
+The server never renews a certificate you brought. When it has under 30 days left, the dashboard
+shows a super admin a banner and the server log says so once a day; replace the two files and the
+server loads them within a day, or at its next restart.
+
+**Reissuing the generated certificate.** A certificate this server generated before this release
+lacks the Authority Key Identifier that strict TLS clients require (Python 3.13 and later, by
+default), so they refuse it even with the CA trusted. A new install has it, and so does any
+certificate minted from here on, such as after a `POSTURERMM_DOMAIN` change. To mint one now
+without changing the domain, delete the generated certificate and its marker, never `ca.crt` or
+`ca.key`, and restart:
+
+```bash
+docker compose exec backend rm /app/tls/server.crt /app/tls/server.key /app/tls/.auto-generated
+docker compose restart backend
+```
+
+Only the certificate is replaced. The CA and its fingerprint stay as they are, so enrolled agents
+keep working. Skip this step when no strict client connects to your install.
+
+**Renewal.** The generated certificate renews itself. The server checks it at start and once a day,
+and when less than 60 of its 825 days remain it replaces it, signed by the same CA and without a
+restart. Enrolled agents notice nothing, and no network is involved. A certificate you brought
+yourself is never touched.
 
 ## The Bastion and the content feed
 
@@ -136,7 +159,8 @@ count is held in the server's memory: restarting the server resets every key's c
 
 API keys work only in the `Authorization: Bearer` header; a key sent as the session cookie is
 refused. Every API call a key makes that changes something is written to the audit log with the
-method, the path and the key's first seven characters. Reads are not logged.
+method, the path and the key's first seven characters (and the tool's name, when an AI client made
+it through `/mcp`). Reads are not logged.
 
 ## Where the images come from
 
