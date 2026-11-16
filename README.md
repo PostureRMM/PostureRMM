@@ -5,92 +5,119 @@ Each release publishes it there (deploy/release/check-public-docs.sh). Its links
 
 <img src="./docs/brand/logo-lockup.svg" alt="PostureRMM" width="380" />
 
-**Endpoint management, security and compliance in one self-hosted platform.**
+### Endpoint management, patching, vulnerabilities and compliance.<br/>One self-hosted console. Private and secure by design.
 
-Manage, patch, deploy, remote into, harden, audit and remediate your Windows endpoints and Linux servers —
-from one console, on your own hardware, with your fleet data never leaving it.
+[![Latest release](https://img.shields.io/github/v/release/PostureRMM/PostureRMM?label=release&color=4f46e5)](https://github.com/PostureRMM/PostureRMM/releases/latest)
+![Beta](https://img.shields.io/badge/status-beta-4f46e5)
+![Free up to 50 endpoints](https://img.shields.io/badge/free-up%20to%2050%20endpoints-16a34a)
+![Windows and Linux](https://img.shields.io/badge/endpoints-Windows%20%7C%20Linux-475569)
 
-**PostureRMM is in beta. It is free for up to 50 endpoints, with every feature. Paid plans are not available yet.**
+**[Quick start](#quick-start)** · **[Docs](docs/quickstart.md)** · **[Releases](https://github.com/PostureRMM/PostureRMM/releases)** · **[Discussions](https://github.com/PostureRMM/PostureRMM/discussions)**
 
 </div>
 
 https://github.com/user-attachments/assets/346e3e1e-52cd-41ad-b672-5609b09331bc
 
-<div align="center">
-<img src="./docs/screenshots/dashboard.png" alt="PostureRMM dashboard: the Posture Score with its trend, the three pillars, Prevention, Patching and Performance, each with its top finding, and open CVEs by severity and age" width="900" />
-</div>
+## What it is
 
----
+A self-hosted RMM for Windows and Linux fleets that also tells you how secure they are, then fixes it.
 
-## See it
+- **Manage:** patching (Windows, Linux, third-party apps), software deployment, remote desktop and terminal, monitoring and alerts.
+- **Secure:** CVEs matched to what's actually installed, plus thousands of DISA STIG and Microsoft baseline checks with one-click fixes that are re-checked afterwards.
+- **Private:** nothing connects in, and your fleet data never leaves your network.
+- **Free:** every feature, up to 50 endpoints.
 
-Every screen below is the product running against a demo fleet of 25 endpoints: made-up
-hostnames, real public CVEs, nothing from a real network.
+## Quick start
 
-**The fleet.** The fleet's posture and each pillar's top finding, then one score per endpoint for each pillar, with its OS, address and when it was last seen.
+On a Linux host with nothing else to prepare:
 
-<img src="./docs/screenshots/fleet.png" alt="The Endpoints page: the fleet posture card with each pillar's top finding, above a list of 25 Windows and Linux endpoints with Prevention, Patching, Performance and Posture scores, OS, address and last seen" width="900" />
+```bash
+mkdir posturermm && cd posturermm
+curl -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/docker-compose.yml
+curl -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/preflight.sh
+chmod +x preflight.sh && sudo ./preflight.sh
+```
 
-**One device.** Why its score is what it is, what it is doing now, and what needs attention first.
+No values to choose, no certificates, no DNS. Open the address it prints, sign in, and enroll your first endpoint. First login, requirements and air-gapped installs are in **[docs/quickstart.md](docs/quickstart.md)**.
+
+<details>
+<summary><b>Trying it on a Windows 10 or 11 PC</b></summary>
+
+<br/>
+
+Do the numbered steps under "Before you start" in **[docs/quickstart.md](docs/quickstart.md#install-on-windows)** first, then in PowerShell:
+
+```powershell
+mkdir posturermm; cd posturermm
+curl.exe -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/docker-compose.yml
+curl.exe -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/preflight.ps1
+powershell -ExecutionPolicy Bypass -File .\preflight.ps1
+```
+
+Windows Server can't host the server, because Docker Desktop runs on Windows 10 and 11 only. Run a small Linux VM in Hyper-V and use the Linux install instead. Windows Server stays a supported endpoint.
+
+</details>
+
+<details>
+<summary><b>Features and the Posture Score</b></summary>
+
+<br/>
+
+Three pillars, equally weighted, rolled into one Posture Score that drills down to the check or measurement behind it.
+
+| Pillar | What it measures |
+|---|---|
+| **Prevention** | DISA STIG, Microsoft Security Baselines and the PostureRMM Recommended hardening profile |
+| **Patching** | CVE exposure, patch latency, and operating system and application end of life |
+| **Performance** | Disk health and fill, SSD wear, thermal throttling, battery health, reboot age, time sync and services |
+
+What isn't measured yet lowers the maximum instead of counting as a failure, so a score is never a guess. A new fleet reads "not yet established", not zero.
+
+**Everything in the box**
+
+| | |
+|---|---|
+| **Compliance** | STIG and baseline audits for Windows and Linux. Authored fixes per endpoint or across the fleet, behind a safety gate that refuses anything that would cut off your own access. Every fix is re-checked and can be reverted. Crosswalks for HIPAA, PCI DSS, SOC 2, ISO 27001, CMMC and Cyber Essentials. |
+| **Patching** | Windows updates scanned against Microsoft's own applicability engine, with no internet needed on the endpoint. Linux updates from the distribution's own advisories. Third-party apps from a curated catalog plus every app in winget. Canary rollouts and maintenance windows. |
+| **Vulnerabilities** | CVE matching across NVD, MSRC, GHSA, EPSS and CISA KEV, aware of version ranges, for software and the operating system. |
+| **Software** | Inventory on Windows and Linux, one-click install and uninstall, your own `.msi`, `.exe` or `.msix` packages, and a blocklist for unapproved remote-access tools. |
+| **Remote access** | Remote desktop in the browser, a real terminal, file transfer, and scripts with approval and live output. No separate tool, no separate agent. |
+| **Fleet** | Dynamic groups, network discovery, hardware and disk-health inventory, reboot policies with user deferral, custom monitors, and alerts to email, webhooks, Slack, Teams and more. |
+| **Access and audit** | OIDC single sign-on, role-based access with group scoping, 2FA, scoped API keys, an audit trail you can forward over syslog, and escrowed BitLocker and local admin passwords. |
+
+</details>
+
+<details>
+<summary><b>Screenshots</b></summary>
+
+<br/>
+
+Every screen is the product running against a demo fleet of 25 endpoints: made-up hostnames, real public CVEs.
+
+<img src="./docs/screenshots/dashboard.png" alt="The dashboard: the Posture Score with its trend, the three pillars each with its top finding, and open CVEs by severity and age" width="900" />
+
+<img src="./docs/screenshots/fleet.png" alt="The Endpoints page: the fleet posture card above a list of 25 Windows and Linux endpoints with Prevention, Patching, Performance and Posture scores" width="900" />
 
 <img src="./docs/screenshots/device.png" alt="A Windows Server 2016 file server with a critical posture score, a nearly full system disk and actively exploited CVEs open" width="900" />
 
-**Benchmarks.** A verdict per benchmark across the fleet: "Passes" with the count of automated rules, or the number of gaps, and "Fix gaps" where an authored fix exists.
+<img src="./docs/screenshots/benchmarks.png" alt="The Benchmarks page: DISA STIG verdicts for Windows, Linux and the browsers" width="900" />
 
-<img src="./docs/screenshots/benchmarks.png" alt="The Benchmarks page: DISA STIG verdicts for Windows, Linux and the browsers, some passing every automated rule and some with gaps" width="900" />
+<img src="./docs/screenshots/software.png" alt="The Software page: installed applications with fleet footprint, update status, CVE and KEV counts, and an Update or Deploy action per row" width="900" />
 
-**Software.** Every application the fleet has installed, how many endpoints run it, whether a newer version is ready, and the CVEs it carries.
-
-<img src="./docs/screenshots/software.png" alt="The Software page: installed applications with their icons, fleet footprint, update status, CVE and KEV counts, and an Update or Deploy action per row" width="900" />
-
-**Vulnerabilities.** The Patching score and the endpoints with the most to recover, then the CVEs matched to what is installed, with CVSS, EPSS and CISA KEV beside each, and how much of the fleet each one reaches.
-
-<img src="./docs/screenshots/vulnerabilities.png" alt="The Vulnerabilities page: the Patching score with its trend and the worst endpoints, above open CVEs matched to installed software, with the affected application, KEV markers, CVSS, EPSS, risk and how many endpoints each reaches" width="900" />
-
-**Deploying the fix.** A deployment for a CVE names the endpoints that need it and lists the Windows updates in the order they install.
+<img src="./docs/screenshots/vulnerabilities.png" alt="The Vulnerabilities page: open CVEs matched to installed software, with KEV markers, CVSS, EPSS, risk and how many endpoints each reaches" width="900" />
 
 <img src="./docs/screenshots/deploy.png" alt="The Deploy page for one CVE: seven endpoints, and the plan listing five Windows updates in install order" width="900" />
 
-**The Bastion.** When it last synced, when it syncs next, and how often, and what it holds for the fleet. With the door shut, requests wait and go out the next time it opens.
+<img src="./docs/screenshots/bastion.png" alt="The Bastion page: last and next sync times, the sync interval, and a package cache of app installers and Windows updates" width="900" />
 
-<img src="./docs/screenshots/bastion.png" alt="The Bastion page: working, with the last and next sync times, a sync interval setting, and a package cache of app installers and Windows updates" width="900" />
+</details>
 
----
+<details>
+<summary><b>Compliance content: eighteen platforms</b></summary>
 
-## What it does
+<br/>
 
-Most tools in this space stop at telling you what is wrong. PostureRMM closes the loop: it finds
-the problem, fixes it, then **re-measures to prove the fix worked** — and if it didn't, it says so
-rather than reporting the API call as a success.
-
-| Area | Capabilities |
-|---|---|
-| **Compliance** | Audit Windows and Linux servers against DISA STIG, Microsoft Security Baselines and a curated hardening profile. Failing checks carry authored fixes that apply per-endpoint, per-check across the fleet, or as "apply all safe fixes" — behind a safety gate that refuses anything which would cut your own access. Every fix is verified by re-running the check, and every fix is revertible, because each executor captures the state it overwrote. |
-| **Patching** | Windows updates scanned **offline** against Microsoft's own applicability engine — no internet needed on the endpoint or the server. Linux package updates from the distribution's own advisories, installed from packages your own server carries. Third-party app updates from a curated catalog. CVE correlation across NVD, EPSS, MSRC, CISA KEV and GHSA with version-range-aware matching. Deployment policies with canary pauses, maintenance windows and an optional supply-chain bake period. |
-| **Software** | Curated app catalog with one-click install and uninstall, custom `.msi`/`.exe`/`.msix` upload, registry-verified installs with exit-code classification and tiered retry, full software inventory on Windows and Linux, and an application blocklist for rival agents and unapproved remote-access tools. |
-| **Remote access** | Browser-based remote desktop (Windows), a real terminal, file browse/upload/download, and PowerShell, `sh` or `bash` execution with an approval workflow and live output — no separate tool, no separate agent. |
-| **Fleet** | Rule-based dynamic groups, ARP network discovery for unmanaged devices, hardware and disk-health inventory, per-endpoint reachability history, maintenance windows, reboot policies with end-user deferral, alerting over webhook and email with delivery health you can see, and custom monitors that run on the agent and alert through the same channels. |
-| **Access & audit** | OIDC single sign-on, five-role RBAC with group scoping, TOTP 2FA, scoped API keys, an audit trail you can forward off-host over TLS syslog, escrowed BitLocker recovery keys and local administrator passwords, a multi-tenant data model, and a read-only "view as" lens so you can check RBAC is what you think it is. |
-
-## The Posture Score
-
-Three pillars, equally weighted, composing one number that drills all the way down to the check or
-telemetry sample that produced it.
-
-| Pillar | Covers |
-|---|---|
-| **Prevention** | DISA STIG, Microsoft Security Baseline, PostureRMM Recommended hardening, mandate crosswalks |
-| **Patching** | CVE exposure, patch latency and cadence, OS and application end-of-life |
-| **Performance** | Disk health and fill projection, SMART/NVMe wear, thermal throttling, battery health, reboot age, time-sync drift, service state |
-
-Unmeasured surface **shrinks the maximum** rather than counting as failure, so a score is never a
-guess dressed up as a number. An empty fleet reads "not yet established", not zero.
-
-## What's in the box
-
-**4,406 atomic compliance checks** across eighteen platforms, imported from upstream DISA SCAP/XCCDF,
-the Microsoft Security Compliance Toolkit and ComplianceAsCode by dedicated importers — not
-hand-transcribed — alongside PostureRMM's own curated hardening checks:
+**4,406 atomic compliance checks**, imported from upstream DISA SCAP/XCCDF, the Microsoft Security Compliance Toolkit and ComplianceAsCode by dedicated importers, not hand-transcribed, alongside PostureRMM's own hardening checks.
 
 | Platform | Checks |
 |---|---|
@@ -101,41 +128,16 @@ hand-transcribed — alongside PostureRMM's own curated hardening checks:
 | Debian 12 · 13 | 208 · 208 |
 | RHEL 9 · 10 (and Rocky, AlmaLinux) | 249 · 291 |
 
-Plus **seven mandate crosswalks** — HIPAA, PCI DSS v4, SOC 2 CC, ISO 27001 Annex A, CMMC L1 and L2,
-and Cyber Essentials — mapping regulatory controls back to the checks that answer them, and the ACSC
-Essential Eight as a coverage lens on Windows that reports what is measured and never claims a
-maturity level.
+Seven mandate crosswalks (HIPAA, PCI DSS v4, SOC 2 CC, ISO 27001 Annex A, CMMC L1 and L2, Cyber Essentials) map regulatory controls to the checks that answer them, and the ACSC Essential Eight is a coverage lens that reports what is measured and never claims a maturity level. Checks and posture rules are YAML, not code: you can read them, and so can your auditor.
 
-Checks are YAML, not code. So is every posture rule. You can read them, and so can your auditor.
+</details>
 
-## Offline by design
+<details>
+<summary><b>How it stays private</b></summary>
 
-**The product runs with no internet at all.** Enrollment, compliance scanning, remediation, patch
-installation, software deployment, remote desktop, reporting — all of it happens on your network. Your
-endpoints never reach out. The backend connects out only to destinations you configure: your alert channels (webhook, Slack, Teams, Discord, Mattermost, ntfy, email, PSA), SSO or LDAP server and audit-log sink, never to us. Even Windows Update scanning is done offline,
-against Microsoft's own applicability engine, so an endpoint never contacts Microsoft either.
+<br/>
 
-The internet buys exactly one thing: **fresh content.** New CVEs, patch payloads, updated
-compliance baselines, the app catalog. That arrives by *hydration* — a single component, the
-Bastion, pulls from a static feed on Cloudflare R2 on a schedule you set. Open egress for a
-maintenance window, let it fill up, close it again. Anything the backend asks for while the door
-is shut queues durably and drains the moment it opens, with no operator action and nothing to
-re-request.
-
-Almost nothing goes the other way. Your install has an opaque identifier, and it is sent with every
-feed request; each license check adds your version, tier and active endpoint count. Nothing about your endpoints or their contents ever leaves your server —
-we never learn which machines you run, what is on them, or what failed a check. There is no inbound
-path to your backend and no way for us to reach it. No activation and no licence token are needed.
-The identifier is shown in the product with this same sentence beside it.
-
-First install and first enrollment work with the door shut too: the agent installer travels inside
-the offline bundle.
-
-## Architecture
-
-RMM is the most abused software category there is — see [LOLRMM](https://lolrmm.io). PostureRMM is
-built so it cannot become another entry on that list: your backend accepts **no inbound connection
-from us**, and cannot be reached by us at all.
+Remote management tools are among the most abused software there is (see [LOLRMM](https://lolrmm.io)). PostureRMM is built so it can't become another entry on that list: your server accepts no inbound connection from us and can't be reached by us at all.
 
 ```
         ┌────────────────────┐
@@ -154,64 +156,36 @@ from us**, and cannot be reached by us at all.
 └─────────────────────────────────────────────────────────────┘
 ```
 
-Run the Bastion always-on and your fleet stays current continuously; run it behind a door you open
-once a month and your fleet stays current as far back as your last sync. Both are first-class —
-neither is a degraded mode.
+- **Everything runs on your network.** Enrollment, scanning, fixes, patch installs, software deployment, remote desktop and reports. Endpoints never reach out, and even Windows Update scanning happens without contacting Microsoft.
+- **The internet only brings fresh content:** new CVEs, patches, baselines and the app catalog. The Bastion fetches it on your schedule. Leave it always on, or open the door for a maintenance window and close it again; anything requested meanwhile queues and goes out next time.
+- **Almost nothing leaves.** Your install sends an opaque identifier with each content request, and its version, tier and endpoint count with each licence check. Nothing about your endpoints, what's on them or what failed a check ever leaves your server. No activation, no licence token.
+- **No cloud version** to migrate you to.
 
-There is no cloud version to migrate you to.
+</details>
 
-## Minimum specs
+<details>
+<summary><b>System requirements</b></summary>
+
+<br/>
 
 | | Server (backend and database) | Bastion |
 |---|---|---|
 | **CPU** | 2 vCPU | 1 vCPU |
-| **RAM** | 4 GB on Linux; **8 GB on a Windows PC** (Docker Desktop gives containers half of it) | 1 GB |
-| **Disk** | 10 GB free to install; plan 40 GB if you will deploy software and patches | 10 GB free; its package cache is capped at 50 GB by default and holds only what you ask for |
-| **OS** | Linux x86-64, or, to try it, Windows 10 or 11 with Docker Desktop | The same, or any Linux host that can run a container |
+| **RAM** | 4 GB on Linux; 8 GB on a Windows PC (Docker Desktop gives containers half of it) | 1 GB |
+| **Disk** | 10 GB to install; plan 40 GB if you will deploy software and patches | 10 GB; its package cache is capped at 50 GB and holds only what you ask for |
+| **OS** | Linux x86-64, or Windows 10 or 11 with Docker Desktop to try it | The same, or any Linux host that runs containers |
 | **Runtime** | Docker Engine 20.10+ with Compose v2, or Podman 5+ as root | The same |
 
-By default the Bastion runs beside the server on the same host, so one machine with the server's specs
-covers both. `preflight.sh` installs a container runtime for you on Debian, Ubuntu, RHEL, Rocky
-and AlmaLinux. Windows Server cannot host the server; Windows Server stays a supported endpoint.
+By default the Bastion runs beside the server, so one machine covers both. `preflight.sh` installs a container runtime for you on Debian, Ubuntu, RHEL, Rocky and AlmaLinux. These figures leave generous headroom: a nine-endpoint demo fleet ran the backend in about 230 MB of RAM at peak.
 
-What these numbers rest on: a demo fleet of nine endpoints on a development build of the
-backend. The backend used about 170 MB of RAM idle and 230 MB at its peak, and no measurable CPU
-when idle. The database was 37 MB, about 0.3 MB of it compliance results per endpoint. The images
-download at about 330 MB (backend 120 MB, Bastion 40 MB, PostgreSQL 170 MB). An idle Bastion held
-8 MB. A development build is not the released image, so read these as indicative. We have not yet
-measured a fleet near the 50-endpoint cap or a Bastion in the middle of a sync, so the table
-leaves generous headroom for both.
+</details>
 
-## Quick Start
+<details>
+<summary><b>Upgrading</b></summary>
 
-```bash
-mkdir posturermm && cd posturermm
-curl -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/docker-compose.yml
-curl -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/preflight.sh
-chmod +x preflight.sh && sudo ./preflight.sh
-```
+<br/>
 
-To try it on a Windows 10 or 11 PC with Docker Desktop, do the numbered steps under "Before you start" in
-**[docs/quickstart.md](docs/quickstart.md#install-on-windows)** first, then in PowerShell:
-
-```powershell
-mkdir posturermm; cd posturermm
-curl.exe -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/docker-compose.yml
-curl.exe -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/preflight.ps1
-powershell -ExecutionPolicy Bypass -File .\preflight.ps1
-```
-
-Windows Server can't host the PostureRMM server: Docker Desktop runs on Windows 10 and 11 only. Run a small Linux VM in
-Hyper-V and use the Linux install above; Windows Server stays a supported endpoint.
-
-Nothing to edit — no values to choose, no certificates, no DNS. Requirements, Docker Desktop's
-licence, first login and the air-gapped install: **[docs/quickstart.md](docs/quickstart.md)**.
-
-## Upgrade
-
-**Back up first** ([how](docs/PRODUCTION.md#backup--restore)): database migrations cannot be undone.
-Then, in the folder holding your `docker-compose.yml` (in PowerShell, `curl.exe -LO`; on Linux,
-`sudo` before `docker`):
+**Back up first** ([how](docs/PRODUCTION.md#backup--restore)): database migrations can't be undone. Then, in the folder holding your `docker-compose.yml` (in PowerShell use `curl.exe -LO`; on Linux put `sudo` before `docker`):
 
 ```bash
 curl -LO https://github.com/PostureRMM/PostureRMM/releases/latest/download/docker-compose.yml
@@ -219,39 +193,31 @@ docker compose pull
 docker compose up -d
 ```
 
-Agents upgrade themselves once the server has the new agent, wherever an upgrade policy covers them.
-What changed and any manual step, for every release you are skipping: the [release notes](docs/release-notes.md).
+Agents upgrade themselves once the server has the new agent, wherever an upgrade policy covers them. What changed in every release you're skipping: the [release notes](docs/release-notes.md).
 
-## Configuration
+</details>
 
-**Every setting is optional, and a default install sets none of them.** `preflight.sh` (`preflight.ps1` on Windows) generates
-the database password and records this host's address; the server generates its session key, TLS
-certificate and bastion secret on first start.
+<details>
+<summary><b>Configuration and production</b></summary>
 
-Reach for **[docs/configuration.md](docs/configuration.md)** when you want a real hostname, a
-different port, your own certificate, a split deployment, the content feed, or log and audit
-tuning — not before installing.
+<br/>
 
-Running it in earnest — TLS with your own certificate, a Bastion in a DMZ, the segment proxy,
-backup and restore, upgrades, metrics and troubleshooting — is
-**[docs/PRODUCTION.md](docs/PRODUCTION.md)**.
+Every setting is optional, and a default install sets none. `preflight` generates the database password and records the host's address; the server generates its session key, TLS certificate and Bastion secret on first start.
 
-## Support and downloads
+- **[docs/configuration.md](docs/configuration.md)**: a real hostname, another port, your own certificate, a split deployment, logging and audit.
+- **[docs/PRODUCTION.md](docs/PRODUCTION.md)**: running it in earnest, with a Bastion in a DMZ, the segment proxy, backup and restore, metrics and troubleshooting.
 
-Everything is here on GitHub for now — there is no support portal, no ticket system, and no
-separate download site.
+</details>
 
-- [**Discussions**](https://github.com/PostureRMM/PostureRMM/discussions) — questions, how-tos,
-  anything you would otherwise ask a colleague
-- [**Issues**](https://github.com/PostureRMM/PostureRMM/issues) — bugs and feature requests
-- [**Releases**](https://github.com/PostureRMM/PostureRMM/releases) — the latest release: the compose
-  file, the preflight scripts, the offline bundle, the agent installers
-- [**Security policy**](SECURITY.md) — report a vulnerability here, never as a public issue
+## Feedback and support
+
+PostureRMM is in beta, built by one person, and every bit of feedback helps: bugs, ideas, or "why would anyone need this".
+
+- **[Discussions](https://github.com/PostureRMM/PostureRMM/discussions)** for questions and ideas
+- **[Issues](https://github.com/PostureRMM/PostureRMM/issues)** for bugs and feature requests
+- **[Releases](https://github.com/PostureRMM/PostureRMM/releases)** for the compose file, preflight scripts, offline bundle and agent installers
+- **[Security policy](SECURITY.md)** to report a vulnerability privately, never as a public issue
 
 ## License
 
-Proprietary — see [LICENSE](LICENSE). No redistribution or rebranding of our builds. It is short and
-written to be read.
-
-The free cap is not a trial, not a feature-limited edition, not "free for personal use". SSO,
-the full posture model, all compliance content, remote access and every report are in it.
+Proprietary: see [LICENSE](LICENSE), which is short and written to be read. Free for up to 50 endpoints with every feature. That's not a trial, not a cut-down edition and not "personal use only". Paid plans aren't available yet.
