@@ -14,6 +14,8 @@ from one console, on your own hardware, with your fleet data never leaving it.
 
 </div>
 
+https://github.com/user-attachments/assets/346e3e1e-52cd-41ad-b672-5609b09331bc
+
 <div align="center">
 <img src="./docs/screenshots/dashboard.png" alt="PostureRMM dashboard: the Posture Score with its trend, the three pillars, Prevention, Patching and Performance, each with its top finding, and open CVEs by severity and age" width="900" />
 </div>
