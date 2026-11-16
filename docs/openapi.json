@@ -3,7 +3,7 @@
   "info": {
     "title": "PostureRMM Integration API",
     "description": "Access to a PostureRMM install, for scripts and integrations: reads, and the writes that pass the same server-side gates as the web UI.\n\nWithin v1 a release may only add: an operation, an optional input, a response field or an enum value. Clients ignore fields they do not know and treat an enum value they do not know as unknown. Lists answer in a `{data, pagination}` envelope; `page` is 1-indexed and `per_page` is clamped to 1-100. The fleet-wide lists (`GET /compliance-results`, `GET /vulnerabilities`) page by `cursor` instead: pass `pagination.next_cursor` back until it is `null`; `per_page` is 1-1000 and there is no total. Every error is `{error, message, details?}`.",
-    "version": "1.32.1"
+    "version": "1.33.2"
   },
   "paths": {
     "/api/v1/admin/bastion/cache-policy": {
@@ -2954,6 +2954,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "origin",
+            "in": "query",
+            "description": "Only entries of this origin: `curated` (hand-picked) or `discovered`\n(listed from the winget index). Default: both.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -3171,6 +3180,114 @@
           },
           "422": {
             "description": "The request is well formed, and the server refuses to act on it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The key's request budget is spent. `Retry-After` carries the seconds.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "format": "int64",
+                  "minimum": 0
+                },
+                "description": "Seconds to wait"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/app-catalog/footprint": {
+      "get": {
+        "tags": [
+          "app-catalog"
+        ],
+        "summary": "The catalogue entries the calling Organization's endpoints have installs\nlinked to, most endpoints first.",
+        "description": "Any role. An entry no install links to is left out. An install links by the\ncatalogue's own rules (ADR-0179): a discovered entry only by an exact\nProductCode, UpgradeCode or PackageFamilyName. Only the calling\nOrganization's active endpoints inside the caller's group read scope count.",
+        "operationId": "footprint",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number, 1-indexed.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "description": "Rows per page, clamped to 1-100.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "origin",
+            "in": "query",
+            "description": "Only entries of this origin: `curated` or `discovered`. Default: `discovered`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of linked entries with their endpoint counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_AppCatalogFootprintItem"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A path or query parameter does not parse.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No credential, or one that is expired or revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key's role or group scope does not allow this read.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4165,7 +4282,7 @@
           "app-catalog"
         ],
         "summary": "Set a feed package's silent-arguments override.",
-        "description": "An Admin's alone: a feed package has no publisher. The override replaces the\nfeed's arguments at every install dispatch for this Organization; it is the\ncommand line an endpoint runs the installer with, as SYSTEM. Null or blank\nclears it. `package_id` must be one of the entry's own packages. Audited.\nA custom app's override is `PUT /custom-apps/{id}/silent-args`.",
+        "description": "A super admin's alone (`403` for an Admin): a feed package has no publisher\nand is shared by every Organization, so its override is install-wide. The\noverride replaces the feed's arguments at every install dispatch; it is the\ncommand line an endpoint runs the installer with, as SYSTEM. Null or blank\nclears it. `package_id` must be one of the entry's own packages. Audited.\nA custom app's override is `PUT /custom-apps/{id}/silent-args`.",
         "operationId": "set_package_silent_args",
         "parameters": [
           {
@@ -4780,8 +4897,8 @@
         "tags": [
           "account"
         ],
-        "summary": "Change the signed-in user's display name or email.",
-        "description": "Any signed-in user. The answer is the profile without the Organization name,\ntype or group scope that `GET` adds.",
+        "summary": "Change the signed-in user's display name.",
+        "description": "Any signed-in user. Sending an `email` that is not the one the account already\nhas is refused (403): an address the user typed, unverified, would link a\nsingle-sign-on identity to this account, so an administrator changes it (the\nEdit user save, or SCIM). Sending the current one is accepted and changes\nnothing. The answer is the profile without the Organization name, type or\ngroup scope that `GET` adds.",
         "operationId": "update_me",
         "requestBody": {
           "content": {
@@ -11768,8 +11885,23 @@
           "endpoint-actions"
         ],
         "summary": "Run one action on many endpoints at once.",
-        "description": "Operator or admin; `reboot`, `upgrade` and `decommission` need admin. An id\nthat is not an endpoint of the key's Organization, or is in a group the key\nmay not write, is skipped without an error.\n\n`scan`, `compliance_scan`, `reboot` and `upgrade` queue one task per endpoint\nand answer `tasks_created` and `skipped`. The tasks are not returned: read\neach endpoint's outcome from its task list\n(`GET /api/v1/endpoints/{id}/tasks`). `decommission` is a status change with\nno task, and answers `affected`. A `reboot` is also recorded as a Change.",
+        "description": "Operator or admin; `reboot`, `upgrade` and `decommission` need admin. An id\nthat is not an endpoint of the key's Organization, or is in a group the key\nmay not write, is skipped without an error.\n\n`scan`, `compliance_scan`, `reboot` and `upgrade` queue one task per endpoint,\nand `vulnerability_scan` one or two (inventory, plus a Windows Update scan on a\nWindows endpoint); each answers `tasks_created` and `skipped`. A\n`vulnerability_scan` part an endpoint refuses (a Windows Update scan already\nrunning or too recent) is listed in `skipped` with the reason while the\nendpoint's other task is still queued. The tasks are not returned: read\neach endpoint's outcome from its task list\n(`GET /api/v1/endpoints/{id}/tasks`). `decommission` is a status change with\nno task, and answers `affected`. A `reboot` is also recorded as a Change and\nan `upgrade` as a deployment, and each writes the audit row the device page\nwrites (`device_action_reboot`, `device_action_upgrade_agent`), so both need a\n`reason` of at least 10 characters. A decommissioned endpoint is skipped, with\nthe reason.\n\nSend an `Idempotency-Key` (1 to 200 characters) to make a retry of a `reboot`\nor `upgrade` safe for 60 seconds: the same key and the same request answers the\nfirst call's response with an `Idempotent-Replayed: true` header and queues\nnothing; `422` when the repeat is a different request, `409` while the first\ncall is running.",
         "operationId": "bulk_actions",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Makes a retry of a `reboot` or `upgrade` safe: a repeat with the same key and the same request answers the first call's response and queues nothing. 1 to 200 characters",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 200
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -11792,7 +11924,7 @@
             }
           },
           "400": {
-            "description": "The body is not JSON, `endpoint_ids` is empty or holds more than 500 ids, `action` is not one of the five, or `upgrade` has no stable release to go to",
+            "description": "The body is not JSON, `endpoint_ids` is empty or holds more than 500 ids, `action` is not one of the six, `reason` is missing or shorter than 10 characters for a `reboot` or `upgrade`, or `upgrade` has no stable release to go to",
             "content": {
               "application/json": {
                 "schema": {
@@ -11813,6 +11945,16 @@
           },
           "403": {
             "description": "The key's role or group scope does not allow this read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A request with this `Idempotency-Key` is still being processed",
             "content": {
               "application/json": {
                 "schema": {
@@ -15554,8 +15696,8 @@
         "tags": [
           "endpoint-actions"
         ],
-        "summary": "Match an endpoint's software against known vulnerabilities now.",
-        "description": "Operator or admin, and the endpoint must be in a group the key may write.\nRuns CPE assignment and CVE correlation over the software the endpoint last\nreported, the missing-update (MSRC) match for a Windows endpoint and the\ndistribution-advisory match for a Linux one, and answers when it is done:\nthis call queues no task. It does not ask the agent to collect again, so it\nre-matches what was last reported against the data the install holds now.",
+        "summary": "Re-match vulnerabilities from the last report.",
+        "description": "Operator or admin, and the endpoint must be in a group the key may write.\nRuns CPE assignment and CVE correlation over the software the endpoint last\nreported, the missing-update (MSRC) match for a Windows endpoint and the\ndistribution-advisory match for a Linux one, and answers with the counts\nwhen it is done. It queues no task and never asks the agent for fresh data,\nso it re-matches what was last reported against the data the install holds\nnow. To have the agent collect again first, use the `vulnerability_scan`\naction of `POST /api/v1/endpoints/{id}/actions`. The path keeps its `scan`\nname for existing clients.",
         "operationId": "scan_endpoint",
         "parameters": [
           {
@@ -15571,7 +15713,7 @@
         ],
         "responses": {
           "200": {
-            "description": "The scan ran",
+            "description": "The re-match ran",
             "content": {
               "application/json": {
                 "schema": {
@@ -17879,7 +18021,7 @@
           "endpoint-actions"
         ],
         "summary": "Upgrade an endpoint's agent to a release the install holds.",
-        "description": "Admin only, and the endpoint must be in a group the key may write. Queues a\ntask and a deployment that tracks it, and writes the audit row a fleet rollout\nwrites. The task's `status` and `result`\n(`get_endpoint_task`) say whether the upgrade ran. A release with no package\nfor the endpoint's platform, or an agent that cannot run an upgrade, answers\n`422`.",
+        "description": "Admin only, and the endpoint must be in a group the key may write. Queues a\ntask and a deployment that tracks it, and writes the `device_action_upgrade_agent`\naudit row the device page writes. The task's `status` and `result`\n(`get_endpoint_task`) say whether the upgrade ran. A release with no package\nfor the endpoint's platform, or an agent that cannot run an upgrade, answers\n`422`; a decommissioned endpoint answers `409`; a `reason` that is missing or\nshorter than 10 characters answers `400`.\n\nA repeat of the same request within a second answers the first call's task\nand writes nothing. Send an `Idempotency-Key` (1 to 200 characters) to make a\nretry safe for 60 seconds: the same key and the same request answers the first\ncall's response with an `Idempotent-Replayed: true` header; `422` when the\nrepeat's body is a different request, `409` while the first call is running.",
         "operationId": "trigger_upgrade",
         "parameters": [
           {
@@ -17890,6 +18032,19 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Makes a retry safe: a repeat with the same key and the same request answers the first call's response and queues nothing. 1 to 200 characters",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 200
             }
           }
         ],
@@ -17915,7 +18070,7 @@
             }
           },
           "400": {
-            "description": "The body is not JSON, or the install holds no release of `target_version`",
+            "description": "The body is not JSON, `reason` is missing or shorter than 10 characters, or the install holds no release of `target_version`",
             "content": {
               "application/json": {
                 "schema": {
@@ -17946,6 +18101,16 @@
           },
           "404": {
             "description": "The named resource does not exist in the caller's Organization.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The endpoint is decommissioned, or a request with this `Idempotency-Key` is still being processed",
             "content": {
               "application/json": {
                 "schema": {
@@ -22714,7 +22879,7 @@
           "notification-channels"
         ],
         "summary": "Change a notification channel.",
-        "description": "Admin or super admin with organization-wide access (403 otherwise). A field\nleft out stays as it is, and a secret left out of `config` keeps the one on\nfile, so a rename or a new recipient never needs the password again. The\nchange is written to the audit log. A linked copy's switch can change; its\ncontent comes from its source, so changing that is a 403 until the copy is\ndetached. A source's change is carried to its copies.",
+        "description": "Admin or super admin with organization-wide access (403 otherwise). A field\nleft out stays as it is, and a secret left out of `config` keeps the one on\nfile, so a rename or a new recipient never needs the password again. Only\nfor the same destination: a new webhook origin, ntfy server, or SMTP host or\nport clears the secrets on file unless the request sends them again. A\nsecret that starts with `enc:v1:` is a 422. The change is written to the audit log. A linked copy's switch can change; its\ncontent comes from its source, so changing that is a 403 until the copy is\ndetached. A source's change is carried to its copies.",
         "operationId": "update_channel",
         "parameters": [
           {
@@ -24492,7 +24657,7 @@
           "policies"
         ],
         "summary": "Create a recurring deployment policy.",
-        "description": "Admin: the `/deploy` wizard's Recurring mode, without the wizard. The policy\nis stored enabled, with its first run computed from `frequency`, `time` and\n`timezone`, and every run carries the authority of the user the key acts as:\na key limited to groups creates a policy that deploys only inside them. 422\nwhen the name is blank, there is no rule or a rule is malformed (a severity,\na category, a performance rule without an automated fix, an app rule naming no\napp, a baseline that is not this Organization's), a weekly policy names no\nday, the day of the month is outside 1-28, the time or zone cannot be read,\nthe canary is below 1, the expiry is outside one hour to 90 days, or the scope\nreaches no endpoint. Written to the audit log.",
+        "description": "Admin: the `/deploy` wizard's Recurring mode, without the wizard. The policy\nis stored enabled, with its first run computed from `frequency`, `time` and\n`timezone`, and every run carries the authority of the user the key acts as.\nA key that is narrower than that user (an Admin key a SuperAdmin minted, or one\nlimited to groups) may name groups it is assigned and nothing else, so the\npolicy deploys only inside them, and is refused (403) otherwise. 422\nwhen the name is blank, there is no rule or a rule is malformed (a severity,\na category, a performance rule without an automated fix, an app rule naming no\napp, a baseline that is not this Organization's), a weekly policy names no\nday, the day of the month is outside 1-28, the time or zone cannot be read,\nthe canary is below 1, the expiry is outside one hour to 90 days, or the scope\nreaches no endpoint. Written to the audit log.",
         "operationId": "create_deployment_policy",
         "requestBody": {
           "content": {
@@ -24768,7 +24933,7 @@
           "policies"
         ],
         "summary": "Enable or disable a deployment policy.",
-        "description": "Operator or admin, and a key limited to groups may switch only a policy it\ncreated (403). Answers the policy as it now stands. Written to the audit log.",
+        "description": "Operator or admin, and a key limited to groups may switch only a policy it\ncreated (403). Switching one on is also refused (403) for a key narrower than\nits owner unless the policy names only groups the key is assigned: a run\ncarries the owner's authority. Answers the policy as it now stands. Written to\nthe audit log.",
         "operationId": "set_deployment_policy_enabled",
         "parameters": [
           {
@@ -24872,7 +25037,7 @@
           "policies"
         ],
         "summary": "Run a deployment policy now.",
-        "description": "Operator or admin, and a key limited to groups may run only a policy it\ncreated (403). The same evaluation the schedule runs, once: it checks the\nrules against the fleet and deploys what each endpoint still needs, as\ndeployments (Changes) triggered by the policy. The schedule does not move.\n409 when the policy is disabled. 404 when the id is not a deployment policy of\nthis Organization. Written to the audit log, naming the deployments created.",
+        "description": "Operator or admin, and a key limited to groups may run only a policy it\ncreated (403), and a key narrower than its owner only one that names groups the\nkey is assigned (403): a run carries the owner's authority. The same evaluation the schedule runs, once: it checks the\nrules against the fleet and deploys what each endpoint still needs, as\ndeployments (Changes) triggered by the policy. The schedule does not move.\n409 when the policy is disabled. 404 when the id is not a deployment policy of\nthis Organization. Written to the audit log, naming the deployments created.",
         "operationId": "run_deployment_policy",
         "parameters": [
           {
@@ -30333,7 +30498,7 @@
           "psa"
         ],
         "summary": "List the PSA's companies.",
-        "description": "Admin only. Asks the connected PSA, within 8 seconds, so the caller can\npick an id. The PSA being down is an answer (`connection`), not an error:\nset the mapping by id anyway.",
+        "description": "Super admin only (`403` for an Admin): the PSA connection is the install's,\nso its company list names every customer the MSP serves, which no one\nOrganization's Admin may read. An Admin sets the mapping by id. Asks the\nconnected PSA, within 8 seconds. The PSA being down is an answer\n(`connection`), not an error: set the mapping by id anyway.",
         "operationId": "list_psa_companies",
         "responses": {
           "200": {
@@ -30475,7 +30640,7 @@
           "psa"
         ],
         "summary": "Map the Organization to a PSA company.",
-        "description": "Admin only, and an Admin limited to assigned groups may read the mapping but\nnot change it (`403`), as on the Channels page: it serves the whole\nOrganization. The mapping is the caller's Organization's. Asks the PSA about\nthe id and stores the name it answers with. Answers `422`, and stores\nnothing, when the PSA answers that it has no such company. When the PSA\ncannot be asked (not connected, unreachable, too slow) the id is stored\nunconfirmed and `unconfirmed_because` says why; saving again confirms it.",
+        "description": "Super admin only (`403` with a reason for an Admin, who reads the mapping):\nthe PSA's companies are the MSP's customers, so only the MSP chooses which\none an Organization's tickets go to. The mapping is the caller's\nOrganization's. Asks the PSA about\nthe id and stores the name it answers with. Answers `422`, and stores\nnothing, when the PSA answers that it has no such company. When the PSA\ncannot be asked (not connected, unreachable, too slow) the id is stored\nunconfirmed and `unconfirmed_because` says why; saving again confirms it.",
         "operationId": "set_psa_company",
         "requestBody": {
           "content": {
@@ -35330,7 +35495,7 @@
           "organizations"
         ],
         "summary": "Change an Organization's name, active state or settings.",
-        "description": "Super admin only. `{\"is_active\": false}` is a **credential revocation**, not a\nflag write: it revokes every session and API key held by every user of the\nOrganization. The default Organization and the caller's own cannot be\ndeactivated (422). `settings.branding.logo_url` is refused (422): a\nlogo is uploaded in the console, not linked.",
+        "description": "Super admin only. `settings` (an object) replaces the Organization's settings;\nthe server's own secrets inside them, such as the evidence-pack signing key,\nare never readable, replaceable or erasable here. `{\"is_active\": false}` is a\n**credential revocation**, not a flag write: it revokes every session and API\nkey held by every user of the Organization. The default Organization and the caller's own cannot be\ndeactivated (422). `settings.branding.logo_url` is refused (422): a\nlogo is uploaded in the console, not linked.",
         "operationId": "update_tenant",
         "parameters": [
           {
@@ -36967,7 +37132,7 @@
           "users"
         ],
         "summary": "Set a user's password.",
-        "description": "Super admin only. The user must change the password at the next sign-in. It\nrevokes their sessions and not their API keys; deactivating the user revokes\nboth.",
+        "description": "Super admin only, signed in as a person: an API key is refused whatever its\nceiling (#8256). The user must change the password at the next sign-in. It\nrevokes their sessions and not their API keys; deactivating the user revokes\nboth.",
         "operationId": "reset_password",
         "parameters": [
           {
@@ -38219,6 +38384,25 @@
           }
         }
       },
+      "AppCatalogFootprintItem": {
+        "type": "object",
+        "description": "One catalogue entry with installs linked to it.",
+        "required": [
+          "winget_id",
+          "endpoint_count"
+        ],
+        "properties": {
+          "endpoint_count": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Endpoints in the caller's group read scope with an install linked to this\nentry. The active fleet only."
+          },
+          "winget_id": {
+            "type": "string",
+            "description": "The winget package identifier, such as `Mozilla.Firefox`."
+          }
+        }
+      },
       "AppCatalogListItem": {
         "allOf": [
           {
@@ -39253,7 +39437,7 @@
                 "items": {
                   "$ref": "#/components/schemas/BulkSkipped"
                 },
-                "description": "Endpoints that got no task, each with the reason."
+                "description": "Endpoints that got no task, each with the reason (see `BulkSkipped`)."
               },
               "success": {
                 "type": "boolean",
@@ -39280,7 +39464,7 @@
         "properties": {
           "action": {
             "type": "string",
-            "description": "`scan` (collect inventory), `compliance_scan`, `reboot`, `upgrade` (to the\nstable release) or `decommission`."
+            "description": "`scan` (collect inventory), `compliance_scan`, `vulnerability_scan`\n(inventory, plus a Windows Update scan on a Windows endpoint), `reboot`,\n`upgrade` (to the stable release) or `decommission`."
           },
           "endpoint_ids": {
             "type": "array",
@@ -39289,6 +39473,13 @@
               "format": "uuid"
             },
             "description": "1 to 500 endpoints."
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why, at least 10 characters. Required for `reboot` and `upgrade` (`400`\nwhen missing or shorter); kept on each endpoint's audit row and, for a\n`reboot`, shown in the shutdown dialog. Ignored by the other actions."
           }
         }
       },
@@ -39462,7 +39653,7 @@
       },
       "BulkSkipped": {
         "type": "object",
-        "description": "An endpoint a bulk action created no task for.",
+        "description": "An endpoint a bulk action created no task for, or, for `vulnerability_scan`,\na part of the scan left out of an endpoint that was queued the rest.",
         "required": [
           "endpoint_id",
           "reason"
@@ -39474,7 +39665,7 @@
           },
           "reason": {
             "type": "string",
-            "description": "Why its agent cannot run the task. Human-readable, and it may change\nbetween releases."
+            "description": "Why its agent cannot run the task, or why the part was left out.\nHuman-readable, and it may change between releases."
           }
         }
       },
@@ -40567,7 +40758,8 @@
           "policy",
           "schedule",
           "posture_action",
-          "system"
+          "system",
+          "retry"
         ]
       },
       "ChangeTypeWire": {
@@ -42552,6 +42744,10 @@
                 "cve_id",
                 "severity",
                 "cvss_v3_score",
+                "cvss_v4_score",
+                "cvss_v2_score",
+                "cvss_figure",
+                "cvss_version",
                 "exploit_available",
                 "cisa_kev",
                 "software_name",
@@ -42565,12 +42761,47 @@
                 "cve_id": {
                   "type": "string"
                 },
+                "cvss_figure": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "format": "float",
+                  "description": "The one figure the product grades this CVE by: the first of\n`cvss_v3_score`, `cvss_v4_score`, `cvss_v2_score` that is present, so it\nequals `cvss_v3_score` whenever there is one. `null` for a CVE nothing\nhas scored. A figure is only comparable within its `cvss_version`."
+                },
+                "cvss_v2_score": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "format": "float",
+                  "description": "The CVSS 2.0 base score, on an older CVE."
+                },
                 "cvss_v3_score": {
                   "type": [
                     "number",
                     "null"
                   ],
                   "format": "float"
+                },
+                "cvss_v4_score": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "format": "float",
+                  "description": "The CVSS 4.0 base score, usually the CNA's on a CVE NVD has not analysed.\nAlongside `cvss_v3_score`, never instead of it."
+                },
+                "cvss_version": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/CvssVersionWire",
+                      "description": "The generation of `cvss_figure`; `null` when it is."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 },
                 "detected_at": {
                   "type": "string",
@@ -42825,6 +43056,15 @@
           }
         }
       },
+      "CvssVersionWire": {
+        "type": "string",
+        "description": "The CVSS generation a `cvss_figure` comes from: `3.x`, `4.0` or `2.0`, spelled\nas the vulnerability CSV and JSON exports spell them. A figure is only\ncomparable with another of the same generation. Clients treat a value they do\nnot know as unknown.",
+        "enum": [
+          "3.x",
+          "4.0",
+          "2.0"
+        ]
+      },
       "DashboardStatsResponse": {
         "type": "object",
         "description": "Fleet counts for the Organization, within the key's group scope.",
@@ -42889,7 +43129,8 @@
           },
           "critical_vulnerability_count": {
             "type": "integer",
-            "format": "int64"
+            "format": "int64",
+            "description": "Open findings (CVE x endpoint) rated critical."
           },
           "endpoint_count": {
             "type": "integer",
@@ -42901,15 +43142,18 @@
           },
           "high_vulnerability_count": {
             "type": "integer",
-            "format": "int64"
+            "format": "int64",
+            "description": "Open findings (CVE x endpoint) rated high."
           },
           "low_vulnerability_count": {
             "type": "integer",
-            "format": "int64"
+            "format": "int64",
+            "description": "Open findings (CVE x endpoint) rated low."
           },
           "medium_vulnerability_count": {
             "type": "integer",
-            "format": "int64"
+            "format": "int64",
+            "description": "Open findings (CVE x endpoint) rated medium."
           },
           "online_count": {
             "type": "integer",
@@ -42918,12 +43162,12 @@
           "unscored_vulnerability_count": {
             "type": "integer",
             "format": "int64",
-            "description": "Open findings on CVEs NVD has not scored yet."
+            "description": "Open findings (CVE x endpoint) on CVEs NVD has not scored yet."
           },
           "vulnerability_count": {
             "type": "integer",
             "format": "int64",
-            "description": "Open vulnerability findings, all severities."
+            "description": "Open findings, all severities: one per CVE on an endpoint, so a CVE open\non ten endpoints counts ten times. The product's \"open CVEs\" (distinct\nCVEs) is a lower figure and is not carried here. A CVSS 0.0 is counted\nin no severity and not in this total. Every `*_vulnerability_count`\nbelow has the same unit."
           }
         }
       },
@@ -43732,7 +43976,7 @@
         "oneOf": [
           {
             "type": "object",
-            "description": "Recollect hardware, software and telemetry now. The bulk bar calls this\n`scan`; on one endpoint `scan` is the vulnerability match\n(`POST /api/v1/endpoints/{id}/scan`).",
+            "description": "Re-read hardware and installed software, and re-check it for CVEs: the\nserver matches the software once the agent reports it. The bulk bar calls\nthis `scan`; `POST /api/v1/endpoints/{id}/scan` instead re-matches what was\nlast reported, without asking the agent.",
             "required": [
               "action"
             ],
@@ -43756,6 +44000,21 @@
                 "type": "string",
                 "enum": [
                   "compliance_scan"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Re-check the endpoint for CVEs: queues an inventory collection and, on a\nWindows endpoint, a Windows Update scan, the two after which the server\nmatches the endpoint's software and missing patches. A part the endpoint\nrefuses (a Windows Update scan already running or too recent) is left out\nand named in `skipped`; the call is refused only when nothing could be\nqueued.",
+            "required": [
+              "action"
+            ],
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": [
+                  "vulnerability_scan"
                 ]
               }
             }
@@ -43822,7 +44081,7 @@
           },
           {
             "type": "object",
-            "description": "Ask Windows Update what the endpoint is missing, now. Refused while one is\nrunning, and for 15 minutes after the last was asked for.",
+            "description": "Ask Windows Update for missing OS patches, and re-check them for CVEs.\nRefused while one is running, and for 15 minutes after the last was asked\nfor.",
             "required": [
               "action"
             ],
@@ -43886,13 +44145,28 @@
             },
             "description": "`migrate_to_machine`: the Changes filed, to follow with\n`GET /api/v1/changes/{id}`. Absent for every other action."
           },
+          "skipped": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "`vulnerability_scan`: each part left out, with the reason. Absent for\nevery other action."
+          },
           "task_id": {
             "type": [
               "string",
               "null"
             ],
             "format": "uuid",
-            "description": "The task queued, to poll with `GET /api/v1/endpoints/{id}/tasks/{task_id}`;\na repeat within a second answers the first call's task. Absent for\n`verify_trust` and `migrate_to_machine`."
+            "description": "The task queued, to poll with `GET /api/v1/endpoints/{id}/tasks/{task_id}`;\na repeat within a second answers the first call's task. For\n`vulnerability_scan`, the first of `task_ids`. Absent for `verify_trust`\nand `migrate_to_machine`."
+          },
+          "task_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "`vulnerability_scan`: every task queued, inventory first. Absent for\nevery other action."
           },
           "trust_confirmed": {
             "type": [
@@ -45107,6 +45381,10 @@
           "status",
           "severity",
           "cvss_v3_score",
+          "cvss_v4_score",
+          "cvss_v2_score",
+          "cvss_figure",
+          "cvss_version",
           "description",
           "exploit_available",
           "cisa_kev",
@@ -45121,12 +45399,47 @@
           "cve_id": {
             "type": "string"
           },
+          "cvss_figure": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float",
+            "description": "The one figure the product grades this CVE by: the first of\n`cvss_v3_score`, `cvss_v4_score`, `cvss_v2_score` that is present, so it\nequals `cvss_v3_score` whenever there is one. `null` for a CVE nothing\nhas scored. A figure is only comparable within its `cvss_version`."
+          },
+          "cvss_v2_score": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float",
+            "description": "The CVSS 2.0 base score, on an older CVE."
+          },
           "cvss_v3_score": {
             "type": [
               "number",
               "null"
             ],
             "format": "float"
+          },
+          "cvss_v4_score": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float",
+            "description": "The CVSS 4.0 base score, usually the CNA's on a CVE NVD has not analysed.\nAlongside `cvss_v3_score`, never instead of it."
+          },
+          "cvss_version": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CvssVersionWire",
+                "description": "The generation of `cvss_figure`; `null` when it is."
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "description": {
             "type": [
@@ -45919,6 +46232,10 @@
           "cve_id",
           "severity",
           "cvss_v3_score",
+          "cvss_v4_score",
+          "cvss_v2_score",
+          "cvss_figure",
+          "cvss_version",
           "exploit_available",
           "cisa_kev",
           "software_name",
@@ -45932,12 +46249,47 @@
           "cve_id": {
             "type": "string"
           },
+          "cvss_figure": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float",
+            "description": "The one figure the product grades this CVE by: the first of\n`cvss_v3_score`, `cvss_v4_score`, `cvss_v2_score` that is present, so it\nequals `cvss_v3_score` whenever there is one. `null` for a CVE nothing\nhas scored. A figure is only comparable within its `cvss_version`."
+          },
+          "cvss_v2_score": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float",
+            "description": "The CVSS 2.0 base score, on an older CVE."
+          },
           "cvss_v3_score": {
             "type": [
               "number",
               "null"
             ],
             "format": "float"
+          },
+          "cvss_v4_score": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float",
+            "description": "The CVSS 4.0 base score, usually the CNA's on a CVE NVD has not analysed.\nAlongside `cvss_v3_score`, never instead of it."
+          },
+          "cvss_version": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CvssVersionWire",
+                "description": "The generation of `cvss_figure`; `null` when it is."
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "detected_at": {
             "type": "string",
@@ -47881,6 +48233,27 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ApiKeyResponse"
+            },
+            "description": "The items for the current page"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta",
+            "description": "Pagination metadata"
+          }
+        }
+      },
+      "PaginatedResponse_AppCatalogFootprintItem": {
+        "type": "object",
+        "description": "Paginated response wrapper.",
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AppCatalogFootprintItem"
             },
             "description": "The items for the current page"
           },
@@ -52409,7 +52782,7 @@
       },
       "ScanResponse": {
         "type": "object",
-        "description": "What a vulnerability scan of one endpoint did. A count of work done, not a\nlist of findings: read those from the vulnerabilities routes.\n\nThe first three counts are the application lane's (CPE matching). On a Linux\nendpoint the dpkg and rpm packages are matched against the distribution's\nadvisories instead, in the same scan, and are not in them: an endpoint with\nhundreds of packages can report a handful evaluated. `vulns_created` and\n`vulns_auto_resolved` cover every lane.",
+        "description": "What a re-match of one endpoint's vulnerabilities did. A count of work done,\nnot a list of findings: read those from the vulnerabilities routes.\n\nThe first three counts are the application lane's (CPE matching). On a Linux\nendpoint the dpkg and rpm packages are matched against the distribution's\nadvisories instead, in the same re-match, and are not in them: an endpoint with\nhundreds of packages can report a handful evaluated. `vulns_created` and\n`vulns_auto_resolved` cover every lane.",
         "required": [
           "software_evaluated",
           "cpe_matched",
@@ -52439,7 +52812,7 @@
           "vulns_auto_resolved": {
             "type": "integer",
             "format": "int64",
-            "description": "Open vulnerabilities this scan found fixed and closed, from every lane.",
+            "description": "Open vulnerabilities this re-match found fixed and closed, from every lane.",
             "minimum": 0
           },
           "vulns_created": {
@@ -54521,7 +54894,8 @@
             "format": "uuid"
           },
           "settings": {
-            "type": "object"
+            "type": "object",
+            "description": "The public settings, as on an Organization."
           },
           "slug": {
             "type": "string"
@@ -54572,7 +54946,7 @@
           },
           "settings": {
             "type": "object",
-            "description": "Free-form Organization settings. Only `branding.company_name` is promised."
+            "description": "The Organization's public settings: `branding.company_name`, and\n`self_service_hardening_enabled` when set. Nothing else a settings bag\nholds is ever returned, secrets least of all."
           },
           "slug": {
             "type": "string",
@@ -55574,7 +55948,7 @@
       },
       "UpdateProfileRequest": {
         "type": "object",
-        "description": "A field left out stays as it is.",
+        "description": "A field left out stays as it is. `email` may be sent back as it stands; a\ndifferent one is refused (403), because an administrator changes it.",
         "properties": {
           "display_name": {
             "type": [
@@ -56113,11 +56487,17 @@
       },
       "UpgradeRequest": {
         "type": "object",
-        "description": "The agent release to move to.",
+        "description": "The agent release to move to, and why.",
         "required": [
-          "target_version"
+          "target_version",
+          "reason"
         ],
         "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Why the agent is being upgraded, at least 10 characters. It is kept on\nthe audit row and the deployment. Missing or shorter answers `400`.",
+            "minLength": 10
+          },
           "target_version": {
             "type": "string",
             "description": "A version the install holds a release for, for example `1.15.0`. Any\nother value answers `400`."

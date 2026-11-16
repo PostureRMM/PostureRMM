@@ -113,7 +113,7 @@ raise it most?"*
 | `fleet_posture` | The Posture Score, its grade and pillars, and how it moved |
 | `posture_trend` | The score over 7 days to a year |
 | `posture_actions` | The fixes that would raise the score, and accepted risks |
-| `fleet_stats` | Counts: endpoints, open vulnerabilities, compliance, protection |
+| `fleet_stats` | Counts: endpoints, open findings (CVE x endpoint, not distinct CVEs), compliance, protection |
 | `agent_health` | How well the agents are reporting |
 | `list_endpoints`, `get_endpoint`, `endpoint_facets` | The endpoints, one endpoint, and the fleet's make-up |
 | `fleet_vulnerabilities` | Open findings across the fleet, filterable to the worst or to known-exploited |
@@ -168,6 +168,7 @@ stops them, and nothing the server could ask the model to confirm would.
 | Tool | What happens to real machines |
 |---|---|
 | `scan_endpoint` | Re-matches what one endpoint last reported against known vulnerabilities: applications by CPE, a Windows endpoint's missing updates, a Linux endpoint's packages against its distribution's advisories. Does not ask the agent to collect again, and changes nothing on the machine |
+| `request_vulnerability_scan` | Asks one endpoint's agent to collect fresh data and re-check it: queues an inventory collection and, on a Windows endpoint, a Windows Update scan, as the device page's Vulnerability scan action does. Findings update when the agent reports, not when the call returns; the answer lists the queued `task_ids` and any `skipped` part with its reason. Unlike `scan_endpoint`, it makes the agent do work |
 | `remediate_endpoint_safe` | Without `confirm`, counts the safe fixes. With it, queues them as a Change that edits the endpoint's configuration |
 | `run_posture_action` | Runs a recommended action's automatic fix on every endpoint it is open on |
 | `remediate_posture_action` | Applies a compliance or hardening fix on every endpoint it is failing on, or on those listed. A dangerous fix is never run: it waits for you in the console |

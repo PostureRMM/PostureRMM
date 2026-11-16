@@ -125,6 +125,7 @@ Two values are required there, and the compose file refuses to start without eit
 | `JWT_SECRET` | generated on the first start, kept in the `posturermm-data` volume | Signing key for login sessions. At least 32 characters. Set it only to rotate the key or to supply one from your own key management. |
 | `POSTURERMM_AUTH__TOTP_SECRET` | generated on the first start, kept in the `posturermm-data` volume | Encrypts stored TOTP secrets and agents' trust re-anchor keys, and peppers MFA backup-code hashes. Deliberately independent of `JWT_SECRET`, so rotating the session key does not brick stored 2FA enrollments. Set it only to rotate or to supply your own. |
 | `POSTURERMM_AUTH__REMOTE_SESSION_REAUTH_INTERVAL_SECS` | `20` | How often an **already-open** remote session — terminal, RDP, screen share, file transfer, live script output — re-checks that the operator driving it is still authorized. Deactivating a user also tears their live sessions down immediately, so this is the worst-case window for a session that raced that sweep, and the mechanism behind revocations with no push door: deletion, demotion, organization deactivation. Costs one indexed lookup per live socket per tick. |
+| `POSTURERMM_AUTH__REMOTE_SESSION_MAX_SECS` | `43200` (12 hours) | The longest an **already-open** remote session — terminal, RDP, screen share, file transfer — may stay open, however busy it is. Measured from the session's recorded start, and checked on the same tick as the setting above, so a session can overshoot by up to that interval. At the limit the session closes with "Session reached its maximum length", its record's close reason is `max_length_reached`, and the operator opens a new session to carry on. Credential revocation and the idle timeout apply as before. `0` turns the cap off. |
 | `POSTURERMM_CREDENTIAL_KEY` | unset | Stored credentials (the ones saved for network scans and remote access) work out of the box: they are encrypted under a key derived from `totp-secret` in the `posturermm-data` volume. Set this only if an earlier release had you set it: when present it is still used, and the log says so. Exactly 64 hexadecimal characters. |
 | `LOG_LEVEL` | `info` | Server log level: `trace`, `debug`, `info`, `warn` or `error`. |
 | `POSTURERMM_LOGGING__ACCESS_LOG_MAX_MB` | `500` | Size cap of the on-disk access log in `posturermm-data` (`/app/data/logs/access.YYYY-MM-DD.jsonl`, one file per UTC day). The oldest day goes first. `0` turns the file off; the lines still go to the container log. Written at `LOG_LEVEL` `info` or lower. |
@@ -139,8 +140,14 @@ switched off, so check the startup log after setting it.
 ## Source address in the audit log
 
 Every audit entry records the client's address. `POSTURERMM_SERVER__TRUSTED_PROXIES` — comma-separated
-IPs or CIDRs, **default empty** — names the addresses whose `X-Forwarded-For` and `X-Real-Ip` headers
-the server believes when it writes that column.
+IPs or CIDRs, **default empty** — names the addresses whose `X-Forwarded-For` header (its right-most
+hop, the one the proxy appended) the server believes when it writes that column.
+
+The server does **not** believe `X-Real-Ip` by default, even from a listed proxy: Caddy's default
+`reverse_proxy` and nginx without `proxy_set_header X-Real-IP $remote_addr;` pass a client's own
+`X-Real-Ip` straight through, which would let any client choose the address behind the `/winget` and
+`/repo` LAN gate, the failed-login limiter and your audit log. If your proxy sets only `X-Real-Ip`, or
+overwrites it, set `POSTURERMM_SERVER__TRUST_X_REAL_IP=true` and the server reads it first.
 
 Empty is the safe default: the server records the address that actually connected and ignores
 forwarding headers, so a client talking straight to it cannot write an address of its own choosing
@@ -149,6 +156,41 @@ own reverse proxy fronts the server, and set it to that proxy's address — forg
 entry records the proxy instead of the client. That mistake is wrong but visible. The reverse one,
 believing a header from an address that is not a proxy, is invisible, which is why it is not the
 default.
+
+## Agent download relay
+
+When an agent needs an installer or update and the server does not hold it, the server fetches it
+on the agent's behalf (the **download relay**). It fetches only from the hosts in
+`POSTURERMM_SERVER__DOWNLOAD_RELAY_ALLOWLIST` (TOML: `server.download_relay_allowlist`), a
+comma-separated list. **Default** (used while the setting is empty): `github.com`,
+`githubusercontent.com`, `download.microsoft.com`, `catalog.s.download.windowsupdate.com`,
+`download.windowsupdate.com`, `cdn.winget.microsoft.com`. Setting it **replaces** that list, so keep
+the entries you still need. Files the server already holds are served without consulting this list.
+
+Two rules, applied to every request and to every redirect the host answers with:
+
+- **A name is matched as written.** `github.com` allows itself and its subdomains. A redirect to any
+  other host is refused, so a vendor cannot send the server somewhere you did not list.
+- **A name can never lead inside your network.** After DNS, the relay refuses any address that is
+  loopback, private (`10/8`, `172.16/12`, `192.168/16`, IPv6 `fc00::/7`), link-local (including the
+  cloud metadata address `169.254.169.254`), shared (`100.64/10`) or unspecified, and it connects
+  only to the addresses it checked, so DNS that answers differently the second time gains nothing.
+  A refused request is answered `403`, and the server logs the URL.
+
+**An internal mirror is allowed on purpose, by IP.** An entry that is an **IP address or a CIDR**
+(`10.20.0.5`, `10.20.0.0/24`, `fd00:20::/64`) is your explicit statement that the relay may reach
+those addresses. It matches URLs whose host is such an address, and it also lets an allow-listed
+*name* that resolves inside that range through. Nothing else does: an allow-listed hostname alone
+never reaches a private address, and an entry covers only the addresses it spells out.
+
+```bash
+# .env — vendor CDNs, plus one internal mirror
+POSTURERMM_SERVER__DOWNLOAD_RELAY_ALLOWLIST=github.com,download.microsoft.com,10.20.0.0/24
+```
+
+If the server reaches the internet through an HTTP proxy (`HTTPS_PROXY`), the proxy resolves the
+destination, so the address rule cannot see it. Name the proxy by IP address, or add its address as
+an IP/CIDR entry here, so the relay can reach the proxy itself.
 
 ## API key request limit
 

@@ -47,6 +47,10 @@ operator guide is [PRODUCTION.md](PRODUCTION.md).
   with it off, only existing users can sign in. An email that belongs to a user
   of another organization is refused. A deactivated user or organization is
   refused.
+  A user cannot change their own email, here or through the API, so the address
+  a first sign-in links by was always set by an administrator, SCIM, an
+  invitation or the identity provider. Change one from Users, before the person
+  first signs in by SSO.
 - **Allowed email domains.** A comma or newline separated list, required with
   auto-provision (a save without one is refused). Matching by email and
   auto-provisioning accept only an email whose domain, after the last `@`, is

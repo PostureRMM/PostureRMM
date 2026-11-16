@@ -2,7 +2,223 @@
 
 What changed in every release, newest first. The hub keeps only the newest release's files, so upgrade to it directly; the notes of earlier releases stay on this page. To upgrade, follow the [upgrade steps](../README.md#upgrade).
 
-Jump to: [1.32.1](#v1.32.1) · [1.32.0](#v1.32.0) · [1.31.0](#v1.31.0) · [1.30.0](#v1.30.0) · [1.29.0](#v1.29.0) · [1.28.1](#v1.28.1) · [1.28.0](#v1.28.0)
+Jump to: [1.33.2](#v1.33.2) · [1.33.1](#v1.33.1) · [1.33.0](#v1.33.0) · [1.32.1](#v1.32.1) · [1.32.0](#v1.32.0) · [1.31.0](#v1.31.0) · [1.30.0](#v1.30.0) · [1.29.0](#v1.29.0) · [1.28.1](#v1.28.1) · [1.28.0](#v1.28.0)
+
+<a id="v1.33.2"></a>
+
+## Version 1.33.2
+
+A new look for the whole console, one-click vulnerability scans, wider vulnerability coverage from CVSS 4.0 and 2.0 scores and vendor-supplied product data, pages that explain every finding they show, and a round of security fixes across the API, agent connections and stored secrets.
+
+### Upgrading
+
+Back up first, because database migrations cannot be undone. Then, in the folder holding your `docker-compose.yml`:
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+There are no manual steps. Agents upgrade through your upgrade policy. The tray portal's new look needs an agent on this version.
+
+### New
+
+- **A new look.** The console uses the Inter typeface, a darker and calmer palette, a single indigo accent for actions, and coloured status pills for scores and states. The sidebar lists only the main areas, with labels. Each page switches between its views from tabs under its title, and the sign-in page carries the product's branding. Endpoint lists show each machine's operating system as an icon, and search results and slide-overs show what kind of thing you are looking at. Every page now uses the same summary figures, tabs, tables, buttons, empty states and coloured notifications, and clicking a row in any list opens its details in a side panel beside the list. The agent's tray window, where users see and run their updates, takes the same typeface and colours once the endpoint runs this release's agent.
+- **Endpoints at a glance.** The Endpoints page opens with your fleet's posture score and a card for each pillar naming its top finding. Click a pillar's health band to filter the list to those endpoints. The list refreshes every 30 seconds, and the endpoint count and Export sit in the page header.
+- **One-click vulnerability scan.** A device's Collect actions include Vulnerability scan. It asks the agent for a fresh inventory and, on Windows, a Windows Update scan, then re-checks everything for CVEs. It is also in the Endpoints bulk actions and on the API. If one part cannot run, for example because a Windows Update scan is already running, the other still runs and you are told what was skipped.
+- **Vulnerability scores for more CVEs.** When the National Vulnerability Database has no CVSS 3 score for a CVE, PostureRMM now uses its CVSS 4.0 or 2.0 score. Each score is labelled with its version in the console, exports and the API. New CVEs the database has not analysed yet are matched from the affected products their publisher listed.
+- **Every finding explains itself.** The rule drawers on the Prevention, Patching and Performance pages say what was measured, what was expected and how to fix it. Each change names what started it and who, and you can retry a change's failed targets as a new change.
+- **Sort any list.** Column headers sort on the remaining lists, including network discovery, baselines, the risk register, certificates, monitors, messaging, Bastion feed streams and Reports. Long lists such as scripts, alert rules and policies page through your whole history and state the true total.
+- **One Reports list.** Report definitions and generated reports are one list, and a row click opens it.
+- **A device page that groups by pillar.** A device has one Patching tab (pending updates, vulnerabilities, deployments and baselines) and one Performance tab with its live views. It also shows the device's last boot time, and a Linux endpoint's point release.
+- **A redesigned Install agent page.** The install command sits beside a live checklist: checked in, enrolled, first scan done. When the endpoint arrives you see its name and address and can open it. The page opens on the platform most of your fleet runs.
+- **Software opens on what your fleet runs most.** The Software page sorts by how many endpoints run each app and hides Windows' own built-in apps such as Calculator, Camera and Clock. They are one click away under Built-in apps. The Status column sorts, and an app with known CVEs but no update in the catalog now says so.
+- **The whole winget catalog.** Beyond the apps we curate, PostureRMM now knows every app in winget, about 16,000 of them. It shows update available, and CVEs where the product match is certain, for any of them you run. An app links to your installed software only on its exact product or package code, never on its name. Apps winget publishes a silent install for can be deployed; the rest show as detect only. The Catalog tab pages through them with Curated, Discovered and All views.
+
+### Fixed
+
+- **API keys could reach beyond their role.** A key could set up two-factor sign-in for its owner and get a session with the owner's full role, reset another user's two-factor sign-in or password, or create a deployment policy that ran with its owner's rights. A key now acts only within its own role, and sign-in, password and two-factor changes need a signed-in person.
+- **Administrators limited to some groups could act outside them.** Agent rollouts, install keys, proxies, groups, posture fixes and the custom app preview now keep to the administrator's assigned groups.
+- **An enrolled agent could affect other devices.** An agent could answer data requests meant for other devices, and an enrolling device could take over another device's enrollment. Each agent now affects only its own device, and a decommissioned device's live connection is closed at once.
+- **Secrets could be read or reused.** Any signed-in user could read the Organization's evidence-pack signing key. A notification channel kept its stored password or token when its destination changed. A local-account password waiting for an offline device was stored readable. All three are fixed.
+- **Organization administrators could reach shared settings.** They could change the install command of apps shared by every Organization, list every company in your PSA, and link their Organization to another customer's PSA company. Those are now super admin tasks.
+- **The installer download helper could be steered.** It now checks every redirect against your allowed list and refuses addresses inside your network.
+- **Remote sessions outlived revoked access.** Shell, remote desktop and file sessions now close when the password, sign-in or API key that opened them is revoked.
+- **A client could fake its address behind a reverse proxy.** Address-based limits and the local network check now use the address your proxy records.
+- **Report exports could carry spreadsheet formulas from device data.** Cells that would run as a formula are made safe.
+
+- **Windows Update installs showed no progress.** A device now reports downloading, downloaded and installing.
+- **A device with a fast clock read "Restart in 7h", and some times were off.** Every time a device reports is stored on server time, and clock skew is measured.
+- **The CVE page said "No fix available" next to a fix it could not send.** It now says what applies, and Linux findings name their advisory.
+- **An empty Updates tab claimed "no missing updates" before any scan had run.** It says so only after a complete scan.
+- **Fleet Patching pages did not say how many endpoints had never been scanned.** They do now.
+- **Signing in with a backup code from the two-factor form failed.** It works.
+- **An administrator could reset two-factor authentication for a user in another Organization.** That is refused and changes nothing.
+- **Dialogs holding a table were cramped and pushed Use off screen.** They are wider, and their cells wrap.
+- **Counts were printed inconsistently.** Thousands are grouped everywhere, and open CVEs and findings use one vocabulary and one rounding.
+- **A flat disk volume showed a fill projection.** It no longer does.
+- **Dialogs, menus and toasts were a lighter grey than the pages behind them.** They now sit on the dark palette, one step above the panel.
+- **Score columns had uneven gaps.** List columns are aligned consistently: text on the left, scores, counts and actions centred.
+- **The dashboard trend chart carried a vertical "Model v10" label.** The chart is clean; the caption beneath it says when the scoring model changed.
+
+### Worth knowing
+
+- **The console looks different.** Navigation moved: the sidebar holds the main areas, and the tabs under each page title switch between views. Nothing was removed.
+- **Reboot dialogs now ask for a reason of at least ten characters.** The reason is kept with the change.
+- **Exports and the endpoint API gained columns** for the CVSS figure and its version. A script that reads columns by position should be checked.
+- **Built-in Windows apps are hidden from the Software page by default.** Use the Built-in apps view to see them. Agents on this version also recognise apps your hardware vendor or administrator pre-installed.
+- **Clickable counts in tables are plain until you point at them.** They turn the link colour on hover or keyboard focus.
+- **Users can no longer change their own email address.** An administrator changes it for them.
+- **Administrators limited to groups have a narrower reach.** Creating groups, rolling out agents to the whole Organization, creating install keys not tied to a group, changing proxies, and linking an Organization to a PSA company need a super admin. An administrator with no assigned groups counts as limited.
+- **API keys cannot sign in, change a password or manage two-factor sign-in** for anyone, at any role. Use the console for those.
+- **Evidence packs exported before this version no longer verify against your server.** Export them again.
+- **Remote sessions end after 12 hours.** Change it with `POSTURERMM_AUTH__REMOTE_SESSION_MAX_SECS`; `0` turns the limit off.
+- **Behind a reverse proxy, the client address now comes from `X-Forwarded-For` only.** If your proxy sends only `X-Real-Ip`, set `POSTURERMM_SERVER__TRUST_X_REAL_IP=true`.
+- **The installer download helper refuses addresses inside your network.** To use an internal mirror, add its IP address or range to the allowed list; `POSTURERMM_SERVER__DOWNLOAD_RELAY_ALLOWLIST` now sets that list.
+- **Report exports prefix formula-like cells with an apostrophe.** A cell starting with `=`, `+`, `-` or `@` that is not a plain number shows a leading `'` in a spreadsheet.
+
+<a id="v1.33.1"></a>
+
+## Version 1.33.1
+
+A new look for the whole console, one-click vulnerability scans, wider vulnerability coverage from CVSS 4.0 and 2.0 scores and vendor-supplied product data, pages that explain every finding they show, and a round of security fixes across the API, agent connections and stored secrets.
+
+### Upgrading
+
+Back up first, because database migrations cannot be undone. Then, in the folder holding your `docker-compose.yml`:
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+There are no manual steps. Agents upgrade through your upgrade policy. The tray portal's new look needs an agent on this version.
+
+### New
+
+- **A new look.** The console uses the Inter typeface, a darker and calmer palette, a single indigo accent for actions, and coloured status pills for scores and states. The sidebar lists only the main areas, with labels. Each page switches between its views from tabs under its title, and the sign-in page carries the product's branding. Endpoint lists show each machine's operating system as an icon, and search results and slide-overs show what kind of thing you are looking at. Every page now uses the same summary figures, tabs, tables, buttons, empty states and coloured notifications, and clicking a row in any list opens its details in a side panel beside the list. The agent's tray window, where users see and run their updates, takes the same typeface and colours once the endpoint runs this release's agent.
+- **Endpoints at a glance.** The Endpoints page opens with your fleet's posture score and a card for each pillar naming its top finding. Click a pillar's health band to filter the list to those endpoints. The list refreshes every 30 seconds, and the endpoint count and Export sit in the page header.
+- **One-click vulnerability scan.** A device's Collect actions include Vulnerability scan. It asks the agent for a fresh inventory and, on Windows, a Windows Update scan, then re-checks everything for CVEs. It is also in the Endpoints bulk actions and on the API. If one part cannot run, for example because a Windows Update scan is already running, the other still runs and you are told what was skipped.
+- **Vulnerability scores for more CVEs.** When the National Vulnerability Database has no CVSS 3 score for a CVE, PostureRMM now uses its CVSS 4.0 or 2.0 score. Each score is labelled with its version in the console, exports and the API. New CVEs the database has not analysed yet are matched from the affected products their publisher listed.
+- **Every finding explains itself.** The rule drawers on the Prevention, Patching and Performance pages say what was measured, what was expected and how to fix it. Each change names what started it and who, and you can retry a change's failed targets as a new change.
+- **Sort any list.** Column headers sort on the remaining lists, including network discovery, baselines, the risk register, certificates, monitors, messaging, Bastion feed streams and Reports. Long lists such as scripts, alert rules and policies page through your whole history and state the true total.
+- **One Reports list.** Report definitions and generated reports are one list, and a row click opens it.
+- **A device page that groups by pillar.** A device has one Patching tab (pending updates, vulnerabilities, deployments and baselines) and one Performance tab with its live views. It also shows the device's last boot time, and a Linux endpoint's point release.
+- **A redesigned Install agent page.** The install command sits beside a live checklist: checked in, enrolled, first scan done. When the endpoint arrives you see its name and address and can open it. The page opens on the platform most of your fleet runs.
+- **Software opens on what your fleet runs most.** The Software page sorts by how many endpoints run each app and hides Windows' own built-in apps such as Calculator, Camera and Clock. They are one click away under Built-in apps. The Status column sorts, and an app with known CVEs but no update in the catalog now says so.
+- **The whole winget catalog.** Beyond the apps we curate, PostureRMM now knows every app in winget, about 16,000 of them. It shows update available, and CVEs where the product match is certain, for any of them you run. An app links to your installed software only on its exact product or package code, never on its name. Apps winget publishes a silent install for can be deployed; the rest show as detect only. The Catalog tab pages through them with Curated, Discovered and All views.
+
+### Fixed
+
+- **API keys could reach beyond their role.** A key could set up two-factor sign-in for its owner and get a session with the owner's full role, reset another user's two-factor sign-in or password, or create a deployment policy that ran with its owner's rights. A key now acts only within its own role, and sign-in, password and two-factor changes need a signed-in person.
+- **Administrators limited to some groups could act outside them.** Agent rollouts, install keys, proxies, groups, posture fixes and the custom app preview now keep to the administrator's assigned groups.
+- **An enrolled agent could affect other devices.** An agent could answer data requests meant for other devices, and an enrolling device could take over another device's enrollment. Each agent now affects only its own device, and a decommissioned device's live connection is closed at once.
+- **Secrets could be read or reused.** Any signed-in user could read the Organization's evidence-pack signing key. A notification channel kept its stored password or token when its destination changed. A local-account password waiting for an offline device was stored readable. All three are fixed.
+- **Organization administrators could reach shared settings.** They could change the install command of apps shared by every Organization, list every company in your PSA, and link their Organization to another customer's PSA company. Those are now super admin tasks.
+- **The installer download helper could be steered.** It now checks every redirect against your allowed list and refuses addresses inside your network.
+- **Remote sessions outlived revoked access.** Shell, remote desktop and file sessions now close when the password, sign-in or API key that opened them is revoked.
+- **A client could fake its address behind a reverse proxy.** Address-based limits and the local network check now use the address your proxy records.
+- **Report exports could carry spreadsheet formulas from device data.** Cells that would run as a formula are made safe.
+
+- **Windows Update installs showed no progress.** A device now reports downloading, downloaded and installing.
+- **A device with a fast clock read "Restart in 7h", and some times were off.** Every time a device reports is stored on server time, and clock skew is measured.
+- **The CVE page said "No fix available" next to a fix it could not send.** It now says what applies, and Linux findings name their advisory.
+- **An empty Updates tab claimed "no missing updates" before any scan had run.** It says so only after a complete scan.
+- **Fleet Patching pages did not say how many endpoints had never been scanned.** They do now.
+- **Signing in with a backup code from the two-factor form failed.** It works.
+- **An administrator could reset two-factor authentication for a user in another Organization.** That is refused and changes nothing.
+- **Dialogs holding a table were cramped and pushed Use off screen.** They are wider, and their cells wrap.
+- **Counts were printed inconsistently.** Thousands are grouped everywhere, and open CVEs and findings use one vocabulary and one rounding.
+- **A flat disk volume showed a fill projection.** It no longer does.
+- **Dialogs, menus and toasts were a lighter grey than the pages behind them.** They now sit on the dark palette, one step above the panel.
+- **Score columns had uneven gaps.** List columns are aligned consistently: text on the left, scores, counts and actions centred.
+- **The dashboard trend chart carried a vertical "Model v10" label.** The chart is clean; the caption beneath it says when the scoring model changed.
+
+### Worth knowing
+
+- **The console looks different.** Navigation moved: the sidebar holds the main areas, and the tabs under each page title switch between views. Nothing was removed.
+- **Reboot dialogs now ask for a reason of at least ten characters.** The reason is kept with the change.
+- **Exports and the endpoint API gained columns** for the CVSS figure and its version. A script that reads columns by position should be checked.
+- **Built-in Windows apps are hidden from the Software page by default.** Use the Built-in apps view to see them. Agents on this version also recognise apps your hardware vendor or administrator pre-installed.
+- **Clickable counts in tables are plain until you point at them.** They turn the link colour on hover or keyboard focus.
+- **Users can no longer change their own email address.** An administrator changes it for them.
+- **Administrators limited to groups have a narrower reach.** Creating groups, rolling out agents to the whole Organization, creating install keys not tied to a group, changing proxies, and linking an Organization to a PSA company need a super admin. An administrator with no assigned groups counts as limited.
+- **API keys cannot sign in, change a password or manage two-factor sign-in** for anyone, at any role. Use the console for those.
+- **Evidence packs exported before this version no longer verify against your server.** Export them again.
+- **Remote sessions end after 12 hours.** Change it with `POSTURERMM_AUTH__REMOTE_SESSION_MAX_SECS`; `0` turns the limit off.
+- **Behind a reverse proxy, the client address now comes from `X-Forwarded-For` only.** If your proxy sends only `X-Real-Ip`, set `POSTURERMM_SERVER__TRUST_X_REAL_IP=true`.
+- **The installer download helper refuses addresses inside your network.** To use an internal mirror, add its IP address or range to the allowed list; `POSTURERMM_SERVER__DOWNLOAD_RELAY_ALLOWLIST` now sets that list.
+- **Report exports prefix formula-like cells with an apostrophe.** A cell starting with `=`, `+`, `-` or `@` that is not a plain number shows a leading `'` in a spreadsheet.
+
+<a id="v1.33.0"></a>
+
+## Version 1.33.0
+
+A new look for the whole console, one-click vulnerability scans, wider vulnerability coverage from CVSS 4.0 and 2.0 scores and vendor-supplied product data, pages that explain every finding they show, and a round of security fixes across the API, agent connections and stored secrets.
+
+### Upgrading
+
+Back up first, because database migrations cannot be undone. Then, in the folder holding your `docker-compose.yml`:
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+There are no manual steps. Agents upgrade through your upgrade policy. The tray portal's new look needs an agent on this version.
+
+### New
+
+- **A new look.** The console uses the Inter typeface, a darker and calmer palette, a single indigo accent for actions, and coloured status pills for scores and states. The sidebar lists only the main areas, with labels. Each page switches between its views from tabs under its title, and the sign-in page carries the product's branding. Endpoint lists show each machine's operating system as an icon, and search results and slide-overs show what kind of thing you are looking at. Every page now uses the same summary figures, tabs, tables, buttons, empty states and coloured notifications, and clicking a row in any list opens its details in a side panel beside the list. The agent's tray window, where users see and run their updates, takes the same typeface and colours once the endpoint runs this release's agent.
+- **Endpoints at a glance.** The Endpoints page opens with your fleet's posture score and a card for each pillar naming its top finding. Click a pillar's health band to filter the list to those endpoints. The list refreshes every 30 seconds, and the endpoint count and Export sit in the page header.
+- **One-click vulnerability scan.** A device's Collect actions include Vulnerability scan. It asks the agent for a fresh inventory and, on Windows, a Windows Update scan, then re-checks everything for CVEs. It is also in the Endpoints bulk actions and on the API. If one part cannot run, for example because a Windows Update scan is already running, the other still runs and you are told what was skipped.
+- **Vulnerability scores for more CVEs.** When the National Vulnerability Database has no CVSS 3 score for a CVE, PostureRMM now uses its CVSS 4.0 or 2.0 score. Each score is labelled with its version in the console, exports and the API. New CVEs the database has not analysed yet are matched from the affected products their publisher listed.
+- **Every finding explains itself.** The rule drawers on the Prevention, Patching and Performance pages say what was measured, what was expected and how to fix it. Each change names what started it and who, and you can retry a change's failed targets as a new change.
+- **Sort any list.** Column headers sort on the remaining lists, including network discovery, baselines, the risk register, certificates, monitors, messaging, Bastion feed streams and Reports. Long lists such as scripts, alert rules and policies page through your whole history and state the true total.
+- **One Reports list.** Report definitions and generated reports are one list, and a row click opens it.
+- **A device page that groups by pillar.** A device has one Patching tab (pending updates, vulnerabilities, deployments and baselines) and one Performance tab with its live views. It also shows the device's last boot time, and a Linux endpoint's point release.
+- **A redesigned Install agent page.** The install command sits beside a live checklist: checked in, enrolled, first scan done. When the endpoint arrives you see its name and address and can open it. The page opens on the platform most of your fleet runs.
+- **Software opens on what your fleet runs most.** The Software page sorts by how many endpoints run each app and hides Windows' own built-in apps such as Calculator, Camera and Clock. They are one click away under Built-in apps. The Status column sorts, and an app with known CVEs but no update in the catalog now says so.
+- **The whole winget catalog.** Beyond the apps we curate, PostureRMM now knows every app in winget, about 16,000 of them. It shows update available, and CVEs where the product match is certain, for any of them you run. An app links to your installed software only on its exact product or package code, never on its name. Apps winget publishes a silent install for can be deployed; the rest show as detect only. The Catalog tab pages through them with Curated, Discovered and All views.
+
+### Fixed
+
+- **API keys could reach beyond their role.** A key could set up two-factor sign-in for its owner and get a session with the owner's full role, reset another user's two-factor sign-in or password, or create a deployment policy that ran with its owner's rights. A key now acts only within its own role, and sign-in, password and two-factor changes need a signed-in person.
+- **Administrators limited to some groups could act outside them.** Agent rollouts, install keys, proxies, groups, posture fixes and the custom app preview now keep to the administrator's assigned groups.
+- **An enrolled agent could affect other devices.** An agent could answer data requests meant for other devices, and an enrolling device could take over another device's enrollment. Each agent now affects only its own device, and a decommissioned device's live connection is closed at once.
+- **Secrets could be read or reused.** Any signed-in user could read the Organization's evidence-pack signing key. A notification channel kept its stored password or token when its destination changed. A local-account password waiting for an offline device was stored readable. All three are fixed.
+- **Organization administrators could reach shared settings.** They could change the install command of apps shared by every Organization, list every company in your PSA, and link their Organization to another customer's PSA company. Those are now super admin tasks.
+- **The installer download helper could be steered.** It now checks every redirect against your allowed list and refuses addresses inside your network.
+- **Remote sessions outlived revoked access.** Shell, remote desktop and file sessions now close when the password, sign-in or API key that opened them is revoked.
+- **A client could fake its address behind a reverse proxy.** Address-based limits and the local network check now use the address your proxy records.
+- **Report exports could carry spreadsheet formulas from device data.** Cells that would run as a formula are made safe.
+
+- **Windows Update installs showed no progress.** A device now reports downloading, downloaded and installing.
+- **A device with a fast clock read "Restart in 7h", and some times were off.** Every time a device reports is stored on server time, and clock skew is measured.
+- **The CVE page said "No fix available" next to a fix it could not send.** It now says what applies, and Linux findings name their advisory.
+- **An empty Updates tab claimed "no missing updates" before any scan had run.** It says so only after a complete scan.
+- **Fleet Patching pages did not say how many endpoints had never been scanned.** They do now.
+- **Signing in with a backup code from the two-factor form failed.** It works.
+- **An administrator could reset two-factor authentication for a user in another Organization.** That is refused and changes nothing.
+- **Dialogs holding a table were cramped and pushed Use off screen.** They are wider, and their cells wrap.
+- **Counts were printed inconsistently.** Thousands are grouped everywhere, and open CVEs and findings use one vocabulary and one rounding.
+- **A flat disk volume showed a fill projection.** It no longer does.
+- **Dialogs, menus and toasts were a lighter grey than the pages behind them.** They now sit on the dark palette, one step above the panel.
+- **Score columns had uneven gaps.** List columns are aligned consistently: text on the left, scores, counts and actions centred.
+- **The dashboard trend chart carried a vertical "Model v10" label.** The chart is clean; the caption beneath it says when the scoring model changed.
+
+### Worth knowing
+
+- **The console looks different.** Navigation moved: the sidebar holds the main areas, and the tabs under each page title switch between views. Nothing was removed.
+- **Reboot dialogs now ask for a reason of at least ten characters.** The reason is kept with the change.
+- **Exports and the endpoint API gained columns** for the CVSS figure and its version. A script that reads columns by position should be checked.
+- **Built-in Windows apps are hidden from the Software page by default.** Use the Built-in apps view to see them. Agents on this version also recognise apps your hardware vendor or administrator pre-installed.
+- **Clickable counts in tables are plain until you point at them.** They turn the link colour on hover or keyboard focus.
+- **Users can no longer change their own email address.** An administrator changes it for them.
+- **Administrators limited to groups have a narrower reach.** Creating groups, rolling out agents to the whole Organization, creating install keys not tied to a group, changing proxies, and linking an Organization to a PSA company need a super admin. An administrator with no assigned groups counts as limited.
+- **API keys cannot sign in, change a password or manage two-factor sign-in** for anyone, at any role. Use the console for those.
+- **Evidence packs exported before this version no longer verify against your server.** Export them again.
+- **Remote sessions end after 12 hours.** Change it with `POSTURERMM_AUTH__REMOTE_SESSION_MAX_SECS`; `0` turns the limit off.
+- **Behind a reverse proxy, the client address now comes from `X-Forwarded-For` only.** If your proxy sends only `X-Real-Ip`, set `POSTURERMM_SERVER__TRUST_X_REAL_IP=true`.
+- **The installer download helper refuses addresses inside your network.** To use an internal mirror, add its IP address or range to the allowed list; `POSTURERMM_SERVER__DOWNLOAD_RELAY_ALLOWLIST` now sets that list.
+- **Report exports prefix formula-like cells with an apostrophe.** A cell starting with `=`, `+`, `-` or `@` that is not a plain number shows a leading `'` in a spreadsheet.
 
 <a id="v1.32.1"></a>
 

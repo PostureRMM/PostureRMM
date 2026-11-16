@@ -15,7 +15,7 @@ from one console, on your own hardware, with your fleet data never leaving it.
 </div>
 
 <div align="center">
-<img src="./docs/screenshots/dashboard.png" alt="PostureRMM dashboard: the Posture Score and its three pillars, Prevention, Patching and Performance" width="900" />
+<img src="./docs/screenshots/dashboard.png" alt="PostureRMM dashboard: the Posture Score with its trend, the three pillars, Prevention, Patching and Performance, each with its top finding, and open CVEs by severity and age" width="900" />
 </div>
 
 ---
@@ -25,9 +25,9 @@ from one console, on your own hardware, with your fleet data never leaving it.
 Every screen below is the product running against a demo fleet of 25 endpoints: made-up
 hostnames, real public CVEs, nothing from a real network.
 
-**The fleet.** One score per endpoint for each pillar, and reachability history beside it.
+**The fleet.** The fleet's posture and each pillar's top finding, then one score per endpoint for each pillar, with its OS, address and when it was last seen.
 
-<img src="./docs/screenshots/fleet.png" alt="The Endpoints list: 25 Windows and Linux endpoints with Prevention, Patching, Performance and Posture scores and reachability" width="900" />
+<img src="./docs/screenshots/fleet.png" alt="The Endpoints page: the fleet posture card with each pillar's top finding, above a list of 25 Windows and Linux endpoints with Prevention, Patching, Performance and Posture scores, OS, address and last seen" width="900" />
 
 **One device.** Why its score is what it is, what it is doing now, and what needs attention first.
 
@@ -39,11 +39,11 @@ hostnames, real public CVEs, nothing from a real network.
 
 **Software.** Every application the fleet has installed, how many endpoints run it, whether a newer version is ready, and the CVEs it carries.
 
-<img src="./docs/screenshots/software.png" alt="The Software page: installed applications with their icons, fleet footprint, update status, CVE and KEV counts, and an update action per row" width="900" />
+<img src="./docs/screenshots/software.png" alt="The Software page: installed applications with their icons, fleet footprint, update status, CVE and KEV counts, and an Update or Deploy action per row" width="900" />
 
-**Vulnerabilities.** CVEs matched to what is installed, with CVSS, EPSS and CISA KEV beside each, and how much of the fleet each one reaches.
+**Vulnerabilities.** The Patching score and the endpoints with the most to recover, then the CVEs matched to what is installed, with CVSS, EPSS and CISA KEV beside each, and how much of the fleet each one reaches.
 
-<img src="./docs/screenshots/vulnerabilities.png" alt="The Vulnerabilities page: open CVEs matched to installed software, with KEV markers, CVSS, EPSS, risk and how many endpoints each reaches" width="900" />
+<img src="./docs/screenshots/vulnerabilities.png" alt="The Vulnerabilities page: the Patching score with its trend and the worst endpoints, above open CVEs matched to installed software, with the affected application, KEV markers, CVSS, EPSS, risk and how many endpoints each reaches" width="900" />
 
 **Deploying the fix.** A deployment for a CVE names the endpoints that need it and lists the Windows updates in the order they install.
 

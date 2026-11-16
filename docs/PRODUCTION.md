@@ -81,7 +81,11 @@ settings are required:
    it and every request resolves to the proxy: audit rows record the proxy, not
    the actor, and ten failed logins from anywhere return 429 to every user. The
    backend warns once on a forwarding header from an untrusted address: that
-   means this setting is missing.
+   means this setting is missing. The proxy must send `X-Forwarded-For` with
+   the client it saw as the last entry (nginx `$proxy_add_x_forwarded_for`,
+   Caddy's default). `X-Real-Ip` is ignored unless you also set
+   `POSTURERMM_SERVER__TRUST_X_REAL_IP=true`, which is only safe when the proxy
+   overwrites that header (nginx `proxy_set_header X-Real-IP $remote_addr;`).
 2. **`Strict-Transport-Security` is your terminator's to send.** The backend
    sends HSTS only when it terminates TLS itself.
 3. **Forward `Host` unchanged** (nginx: `proxy_set_header Host $host;`).
@@ -260,7 +264,7 @@ first pull. Until then Endpoints → Install first endpoint shows *Fetching agen
 v…* and no install command. Behind a maintenance window it waits, queued.
 
 For SCCM / Intune / GPO flows, take the MSI URL and checksum from Admin UI →
-Endpoints → Install agent → More install options, pass `SERVERURL` on the
+Endpoints → Install agent → More options, pass `SERVERURL` on the
 `msiexec` command line, and drop `install-key.txt` beside the MSI.
 
 **Application control.** The Windows agent is not yet code-signed, so Smart
