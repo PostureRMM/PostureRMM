@@ -158,7 +158,7 @@ Remote management tools are among the most abused software there is (see [LOLRMM
 
 - **Everything runs on your network.** Enrollment, scanning, fixes, patch installs, software deployment, remote desktop and reports. Endpoints never reach out, and even Windows Update scanning happens without contacting Microsoft.
 - **The internet only brings fresh content:** new CVEs, patches, baselines and the app catalog. The Bastion fetches it on your schedule. Leave it always on, or open the door for a maintenance window and close it again; anything requested meanwhile queues and goes out next time.
-- **Almost nothing leaves.** Your install sends an opaque identifier with each content request, and its version, tier and endpoint count with each licence check. Nothing about your endpoints, what's on them or what failed a check ever leaves your server. No activation, no licence token.
+- **Almost nothing leaves.** Your install has an opaque identifier, and it is sent with every feed request; each license check adds your version, tier and active endpoint count. Nothing about your endpoints or their contents ever leaves your server — we never learn which machines you run, what is on them, or what failed a check. No activation and no license token are needed. The identifier is shown in the product with this same sentence beside it.
 - **No cloud version** to migrate you to.
 
 </details>

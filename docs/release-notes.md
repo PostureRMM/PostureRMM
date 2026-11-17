@@ -2,13 +2,99 @@
 
 What changed in every release, newest first. The hub keeps only the newest release's files, so upgrade to it directly; the notes of earlier releases stay on this page. To upgrade, follow the [upgrade steps](../README.md#upgrade).
 
-Jump to: [1.33.2](#v1.33.2) · [1.33.1](#v1.33.1) · [1.33.0](#v1.33.0) · [1.32.1](#v1.32.1) · [1.32.0](#v1.32.0) · [1.31.0](#v1.31.0) · [1.30.0](#v1.30.0) · [1.29.0](#v1.29.0) · [1.28.1](#v1.28.1) · [1.28.0](#v1.28.0)
+Jump to: [1.34.1](#v1.34.1) · [1.34.0](#v1.34.0) · [1.33.2](#v1.33.2) · [1.33.1](#v1.33.1) · [1.33.0](#v1.33.0) · [1.32.1](#v1.32.1) · [1.32.0](#v1.32.0) · [1.31.0](#v1.31.0) · [1.30.0](#v1.30.0) · [1.29.0](#v1.29.0) · [1.28.1](#v1.28.1) · [1.28.0](#v1.28.0)
+
+<a id="v1.34.1"></a>
+
+## Version 1.34.1
+
+Updates now reach apps that only ship as a zip or an MSIX, apps installed for a single user, and CVEs the National Vulnerability Database has not scored yet.
+
+### Upgrading
+
+Back up first, because database migrations cannot be undone. Then, in the folder holding your `docker-compose.yml`:
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+There are no manual steps. Agents upgrade through your upgrade policy. Zip-packaged apps and the move from an MSI install to an MSIX install need an agent on this version; older agents are told to upgrade instead of trying.
+
+### New
+
+- **Zip-packaged apps can be updated.** About 500 apps that winget publishes as a zip around an installer, such as MobaXterm and Microsoft GameInput, can now be deployed. The agent checks the download, unpacks it, runs the installer inside, and cleans up.
+- **Apps that moved to MSIX update cleanly.** When a new version ships only as an MSIX, as PowerShell 7.7 does, the agent removes the older MSI install and installs the MSIX in its place, instead of leaving two copies.
+- **Updates for apps installed by one user.** Store apps and other apps a user installed for themselves, such as WinDbg, are offered their updates in the tray and on the device's Updates tab, and install in that user's session. Deploys, the deploy wizard and policies update each user's own copy the same way. The device shows these as "Update available (user)" with the user's name.
+- **A severity for every CVE.** When the National Vulnerability Database has not scored a CVE yet, common for Linux kernel CVEs, PostureRMM uses the rating from Ubuntu, Debian or Red Hat, the rating Rocky Linux and AlmaLinux also follow. It is shown with its source, for example "Medium · Ubuntu", and is never presented as a CVSS score.
+- **Each machine uses its own distribution's rating.** A device's vulnerabilities, counts and Patching score use the rating from that machine's own distribution. Fleet-wide lists show the highest rating any distribution gives.
+- **SQL Server drivers by major version.** OLE DB Driver 18 and 19, and ODBC Driver 17 and 18, are listed and updated separately.
+
+### Fixed
+
+- **Hovering the Severity trend chart hid some of its layers.** The chart stays fully drawn while you hover.
+- **Linux kernel CVEs were listed against a small tool instead of the kernel.** They are listed against the kernel, once per machine, on Debian, Ubuntu and Red Hat-family systems.
+- **Thousands of CVEs read "Not yet scored".** They now carry their distribution's rating, and CVEs with only a CVSS 4.0 or 2.0 score show that score's severity.
+- **A Windows Update scan sometimes failed while the update service was restarting.** The agent waits and tries once more.
+- **An OLE DB Driver 18 install was offered Driver 19.** Each major version is offered its own updates.
+- **On a phone, the search box cut off its placeholder text.** It shows in full.
+
+### Security
+
+Nothing.
+
+### Worth knowing
+
+- **Patching scores may drop after upgrading.** CVEs that were "Not yet scored" now have a severity and count toward Patching, as they would in other scanners.
+- **"Medium · Ubuntu" and similar labels are distribution ratings, not CVSS scores.** Risk scores still use CVSS only.
+
+<a id="v1.34.0"></a>
+
+## Version 1.34.0
+
+Updates now reach apps that only ship as a zip or an MSIX, apps installed for a single user, and CVEs the National Vulnerability Database has not scored yet.
+
+### Upgrading
+
+Back up first, because database migrations cannot be undone. Then, in the folder holding your `docker-compose.yml`:
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+There are no manual steps. Agents upgrade through your upgrade policy. Zip-packaged apps and the move from an MSI install to an MSIX install need an agent on this version; older agents are told to upgrade instead of trying.
+
+### New
+
+- **Zip-packaged apps can be updated.** About 500 apps that winget publishes as a zip around an installer, such as MobaXterm and Microsoft GameInput, can now be deployed. The agent checks the download, unpacks it, runs the installer inside, and cleans up.
+- **Apps that moved to MSIX update cleanly.** When a new version ships only as an MSIX, as PowerShell 7.7 does, the agent removes the older MSI install and installs the MSIX in its place, instead of leaving two copies.
+- **Updates for apps installed by one user.** Store apps and other apps a user installed for themselves, such as WinDbg, are offered their updates in the tray and on the device's Updates tab, and install in that user's session. Deploys, the deploy wizard and policies update each user's own copy the same way. The device shows these as "Update available (user)" with the user's name.
+- **A severity for every CVE.** When the National Vulnerability Database has not scored a CVE yet, common for Linux kernel CVEs, PostureRMM uses the rating from Ubuntu, Debian or Red Hat, the rating Rocky Linux and AlmaLinux also follow. It is shown with its source, for example "Medium · Ubuntu", and is never presented as a CVSS score.
+- **Each machine uses its own distribution's rating.** A device's vulnerabilities, counts and Patching score use the rating from that machine's own distribution. Fleet-wide lists show the highest rating any distribution gives.
+- **SQL Server drivers by major version.** OLE DB Driver 18 and 19, and ODBC Driver 17 and 18, are listed and updated separately.
+
+### Fixed
+
+- **Hovering the Severity trend chart hid some of its layers.** The chart stays fully drawn while you hover.
+- **Linux kernel CVEs were listed against a small tool instead of the kernel.** They are listed against the kernel, once per machine, on Debian, Ubuntu and Red Hat-family systems.
+- **Thousands of CVEs read "Not yet scored".** They now carry their distribution's rating, and CVEs with only a CVSS 4.0 or 2.0 score show that score's severity.
+- **A Windows Update scan sometimes failed while the update service was restarting.** The agent waits and tries once more.
+- **An OLE DB Driver 18 install was offered Driver 19.** Each major version is offered its own updates.
+- **On a phone, the search box cut off its placeholder text.** It shows in full.
+
+### Security
+
+Nothing.
+
+### Worth knowing
+
+- **Patching scores may drop after upgrading.** CVEs that were "Not yet scored" now have a severity and count toward Patching, as they would in other scanners.
+- **"Medium · Ubuntu" and similar labels are distribution ratings, not CVSS scores.** Risk scores still use CVSS only.
 
 <a id="v1.33.2"></a>
 
 ## Version 1.33.2
 
-A new look for the whole console, one-click vulnerability scans, wider vulnerability coverage from CVSS 4.0 and 2.0 scores and vendor-supplied product data, pages that explain every finding they show, and a round of security fixes across the API, agent connections and stored secrets.
+A new look for the whole console, one-click vulnerability scans, wider vulnerability coverage from CVSS 4.0 and 2.0 scores and vendor-supplied product data, and pages that explain every finding they show.
 
 ### Upgrading
 
@@ -36,29 +122,22 @@ There are no manual steps. Agents upgrade through your upgrade policy. The tray 
 
 ### Fixed
 
-- **API keys could reach beyond their role.** A key could set up two-factor sign-in for its owner and get a session with the owner's full role, reset another user's two-factor sign-in or password, or create a deployment policy that ran with its owner's rights. A key now acts only within its own role, and sign-in, password and two-factor changes need a signed-in person.
-- **Administrators limited to some groups could act outside them.** Agent rollouts, install keys, proxies, groups, posture fixes and the custom app preview now keep to the administrator's assigned groups.
-- **An enrolled agent could affect other devices.** An agent could answer data requests meant for other devices, and an enrolling device could take over another device's enrollment. Each agent now affects only its own device, and a decommissioned device's live connection is closed at once.
-- **Secrets could be read or reused.** Any signed-in user could read the Organization's evidence-pack signing key. A notification channel kept its stored password or token when its destination changed. A local-account password waiting for an offline device was stored readable. All three are fixed.
-- **Organization administrators could reach shared settings.** They could change the install command of apps shared by every Organization, list every company in your PSA, and link their Organization to another customer's PSA company. Those are now super admin tasks.
-- **The installer download helper could be steered.** It now checks every redirect against your allowed list and refuses addresses inside your network.
-- **Remote sessions outlived revoked access.** Shell, remote desktop and file sessions now close when the password, sign-in or API key that opened them is revoked.
-- **A client could fake its address behind a reverse proxy.** Address-based limits and the local network check now use the address your proxy records.
-- **Report exports could carry spreadsheet formulas from device data.** Cells that would run as a formula are made safe.
-
 - **Windows Update installs showed no progress.** A device now reports downloading, downloaded and installing.
 - **A device with a fast clock read "Restart in 7h", and some times were off.** Every time a device reports is stored on server time, and clock skew is measured.
 - **The CVE page said "No fix available" next to a fix it could not send.** It now says what applies, and Linux findings name their advisory.
 - **An empty Updates tab claimed "no missing updates" before any scan had run.** It says so only after a complete scan.
 - **Fleet Patching pages did not say how many endpoints had never been scanned.** They do now.
 - **Signing in with a backup code from the two-factor form failed.** It works.
-- **An administrator could reset two-factor authentication for a user in another Organization.** That is refused and changes nothing.
 - **Dialogs holding a table were cramped and pushed Use off screen.** They are wider, and their cells wrap.
 - **Counts were printed inconsistently.** Thousands are grouped everywhere, and open CVEs and findings use one vocabulary and one rounding.
 - **A flat disk volume showed a fill projection.** It no longer does.
 - **Dialogs, menus and toasts were a lighter grey than the pages behind them.** They now sit on the dark palette, one step above the panel.
 - **Score columns had uneven gaps.** List columns are aligned consistently: text on the left, scores, counts and actions centred.
 - **The dashboard trend chart carried a vertical "Model v10" label.** The chart is clean; the caption beneath it says when the scoring model changed.
+
+### Security
+
+This release includes security hardening. All installs before 1.33.2 should upgrade.
 
 ### Worth knowing
 
