@@ -16,7 +16,7 @@ Each release publishes it there (deploy/release/check-public-docs.sh). Its links
 
 </div>
 
-https://github.com/user-attachments/assets/346e3e1e-52cd-41ad-b672-5609b09331bc
+https://github.com/user-attachments/assets/f8f811e9-cd39-4ec7-bbf1-d4665191860d
 
 ## What it is
 
@@ -26,6 +26,10 @@ A self-hosted RMM for Windows and Linux fleets that also tells you how secure th
 - **Secure:** CVEs matched to what's actually installed, plus thousands of DISA STIG and Microsoft baseline checks with one-click fixes that are re-checked afterwards.
 - **Private:** nothing connects in, and your fleet data never leaves your network.
 - **Free:** every feature, up to 50 endpoints.
+
+## Where is the code?
+
+PostureRMM is closed source, free up to 50 endpoints. This repository holds the documentation and the releases; the software itself is under **[Releases](https://github.com/PostureRMM/PostureRMM/releases/latest)**. Every release ships `SHA256SUMS.txt`, a software bill of materials (SBOM) for each binary and image, and a signed release statement that agents check before they upgrade. To verify a download, put `SHA256SUMS.txt` beside it and run `sha256sum -c --ignore-missing SHA256SUMS.txt`; the steps, with SBOM examples, are in **[Verifying a release](docs/PRODUCTION.md#verifying-a-release)**. The Windows agent is not yet code-signed, so a strict application-control policy may need an allow rule (see [docs/PRODUCTION.md](docs/PRODUCTION.md#agent-rollout)).
 
 ## Quick start
 

@@ -2,7 +2,50 @@
 
 What changed in every release, newest first. The hub keeps only the newest release's files, so upgrade to it directly; the notes of earlier releases stay on this page. To upgrade, follow the [upgrade steps](../README.md#upgrade).
 
-Jump to: [1.34.1](#v1.34.1) · [1.34.0](#v1.34.0) · [1.33.2](#v1.33.2) · [1.33.1](#v1.33.1) · [1.33.0](#v1.33.0) · [1.32.1](#v1.32.1) · [1.32.0](#v1.32.0) · [1.31.0](#v1.31.0) · [1.30.0](#v1.30.0) · [1.29.0](#v1.29.0) · [1.28.1](#v1.28.1) · [1.28.0](#v1.28.0)
+Jump to: [1.35.0](#v1.35.0) · [1.34.1](#v1.34.1) · [1.34.0](#v1.34.0) · [1.33.2](#v1.33.2) · [1.33.1](#v1.33.1) · [1.33.0](#v1.33.0) · [1.32.1](#v1.32.1) · [1.32.0](#v1.32.0) · [1.31.0](#v1.31.0) · [1.30.0](#v1.30.0) · [1.29.0](#v1.29.0) · [1.28.1](#v1.28.1) · [1.28.0](#v1.28.0)
+
+<a id="v1.35.0"></a>
+
+## Version 1.35.0
+
+Pending updates now count every copy that needs updating, including copies one user installed, and false .NET vulnerabilities are gone.
+
+### Upgrading
+
+Back up first, because database migrations cannot be undone. Then, in the folder holding your `docker-compose.yml`:
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+There are no manual steps. Agents upgrade through your upgrade policy; the tray fix below needs an agent on this version.
+
+### New
+
+- **Per-user copies count as pending.** An app one user installed for themselves now counts in a device's "Pending (N)", in the endpoint list's patch count and its export, in the Patch Status report and on the device Overview, with the split between machine and per-user copies shown.
+- **Node.js Current moves to Node.js LTS.** When winget stops publishing a package and another one carries the same product line on, as Node.js Current did with Node.js LTS, the device is offered the newer version as an in-place upgrade. A link is made only when the new installer itself proves it replaces the old one, never from the name.
+- **A warning before an install path moves.** Before an update swaps an MSI install for an MSIX, the deploy wizard, the device's Pending updates and the tray say which copy is removed and that the new one lives under `C:\Program Files\WindowsApps`.
+- **Pending update details.** Clicking an update on a device's Pending updates opens a side panel with its versions, owner and the CVEs it closes.
+- **CVEs with no fix are grouped by product.** On a device's Vulnerabilities tab, CVEs that have no fix yet are grouped under the installed product they affect.
+- **The disk fill forecast explains itself.** The rule shows which volume is growing, how fast, and when it would fill.
+- **The device Overview matches the Endpoints page.** The posture header is the same one the Endpoints page uses, with each pillar's score and top finding.
+
+### Fixed
+
+- **.NET showed dozens of vulnerabilities it did not have.** Each .NET release line is now matched against its own version numbers.
+- **The Vulnerabilities panel offered an update the Updates tab did not show.** Both read the same catalogue decision.
+- **The tray's update list went blank during "Update all".** Updates it started stay listed while they install.
+- **A device's Pending updates said "Deploy".** It says "Install".
+- **A stray scrollbar appeared after the last tab on a device page.** It is gone.
+
+### Security
+
+This release includes security hardening. All installs before 1.35.0 should upgrade.
+
+### Worth knowing
+
+- **Pending counts may rise after upgrading.** Copies that a single user installed now count, as they already did on the device's Updates tab.
+- **An MSIX update moves the app's install path.** Repoint anything pinned to the old path, such as a scheduled task or a firewall rule.
 
 <a id="v1.34.1"></a>
 
