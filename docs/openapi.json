@@ -3,7 +3,7 @@
   "info": {
     "title": "PostureRMM Integration API",
     "description": "Access to a PostureRMM install, for scripts and integrations: reads, and the writes that pass the same server-side gates as the web UI.\n\nWithin v1 a release may only add: an operation, an optional input, a response field or an enum value. Clients ignore fields they do not know and treat an enum value they do not know as unknown. Lists answer in a `{data, pagination}` envelope; `page` is 1-indexed and `per_page` is clamped to 1-100. The fleet-wide lists (`GET /compliance-results`, `GET /vulnerabilities`) page by `cursor` instead: pass `pagination.next_cursor` back until it is `null`; `per_page` is 1-1000 and there is no total. Every error is `{error, message, details?}`.",
-    "version": "1.35.0"
+    "version": "1.36.0"
   },
   "paths": {
     "/api/v1/admin/bastion/cache-policy": {
@@ -11791,24 +11791,9 @@
             }
           },
           {
-            "name": "business_unit",
+            "name": "field",
             "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "criticality",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "environment",
-            "in": "query",
+            "description": "One operator-set choice-list property and the option to keep,\n`<property id>:<choice>` (the choice as the list spells it), for example\n`9b2…:Finance`. What an admin set an endpoint to is\n`GET /api/v1/endpoints/{id}/properties`.",
             "required": false,
             "schema": {
               "type": "string"
@@ -11885,7 +11870,7 @@
           "endpoint-actions"
         ],
         "summary": "Run one action on many endpoints at once.",
-        "description": "Operator or admin; `reboot`, `upgrade` and `decommission` need admin. An id\nthat is not an endpoint of the key's Organization, or is in a group the key\nmay not write, is skipped without an error.\n\n`scan`, `compliance_scan`, `reboot` and `upgrade` queue one task per endpoint,\nand `vulnerability_scan` one or two (inventory, plus a Windows Update scan on a\nWindows endpoint); each answers `tasks_created` and `skipped`. A\n`vulnerability_scan` part an endpoint refuses (a Windows Update scan already\nrunning or too recent) is listed in `skipped` with the reason while the\nendpoint's other task is still queued. The tasks are not returned: read\neach endpoint's outcome from its task list\n(`GET /api/v1/endpoints/{id}/tasks`). `decommission` is a status change with\nno task, and answers `affected`. A `reboot` is also recorded as a Change and\nan `upgrade` as a deployment, and each writes the audit row the device page\nwrites (`device_action_reboot`, `device_action_upgrade_agent`), so both need a\n`reason` of at least 10 characters. A decommissioned endpoint is skipped, with\nthe reason.\n\nSend an `Idempotency-Key` (1 to 200 characters) to make a retry of a `reboot`\nor `upgrade` safe for 60 seconds: the same key and the same request answers the\nfirst call's response with an `Idempotent-Replayed: true` header and queues\nnothing; `422` when the repeat is a different request, `409` while the first\ncall is running.",
+        "description": "Name the endpoints by `endpoint_ids` (1 to 500) or by a `filter` (every\nendpoint the `/endpoints` list matches, no cap). Operator or admin; `reboot`, `upgrade` and `decommission` need admin. An id\nthat is not an endpoint of the key's Organization, or is in a group the key\nmay not write, is skipped without an error.\n\n`scan`, `compliance_scan`, `reboot` and `upgrade` queue one task per endpoint,\nand `vulnerability_scan` one or two (inventory, plus a Windows Update scan on a\nWindows endpoint); each answers `tasks_created` and `skipped`. A\n`vulnerability_scan` part an endpoint refuses (a Windows Update scan already\nrunning or too recent) is listed in `skipped` with the reason while the\nendpoint's other task is still queued. The tasks are not returned: read\neach endpoint's outcome from its task list\n(`GET /api/v1/endpoints/{id}/tasks`). `decommission` is a status change with\nno task, and answers `affected`. A `reboot` is also recorded as a Change and\nan `upgrade` as a deployment, and each writes the audit row the device page\nwrites (`device_action_reboot`, `device_action_upgrade_agent`), so both need a\n`reason` of at least 10 characters. A decommissioned endpoint is skipped, with\nthe reason.\n\nSend an `Idempotency-Key` (1 to 200 characters) to make a retry of a `reboot`\nor `upgrade` safe for 60 seconds: the same key and the same request answers the\nfirst call's response with an `Idempotent-Replayed: true` header and queues\nnothing; `422` when the repeat is a different request, `409` while the first\ncall is running.",
         "operationId": "bulk_actions",
         "parameters": [
           {
@@ -11924,7 +11909,7 @@
             }
           },
           "400": {
-            "description": "The body is not JSON, `endpoint_ids` is empty or holds more than 500 ids, `action` is not one of the six, `reason` is missing or shorter than 10 characters for a `reboot` or `upgrade`, or `upgrade` has no stable release to go to",
+            "description": "The body is not JSON, it names neither `endpoint_ids` nor `filter` or names both, names a `filter` without `expected_count`, `endpoint_ids` holds more than 500 ids, `action` is not one of the six, `reason` is missing or shorter than 10 characters for a `reboot` or `upgrade`, or `upgrade` has no stable release to go to",
             "content": {
               "application/json": {
                 "schema": {
@@ -11954,7 +11939,7 @@
             }
           },
           "409": {
-            "description": "A request with this `Idempotency-Key` is still being processed",
+            "description": "A request with this `Idempotency-Key` is still being processed, or the `filter` now matches a different number of endpoints than `expected_count`",
             "content": {
               "application/json": {
                 "schema": {
@@ -12094,7 +12079,7 @@
           "endpoints"
         ],
         "summary": "Facet counts for the endpoints the caller may see.",
-        "description": "Counts by status, OS, criticality and environment, plus the KEV, drift,\nstale-benchmark and unverified-trust totals. Drives the filter dropdowns.",
+        "description": "Counts by status and OS, plus the KEV, drift,\nstale-benchmark and unverified-trust totals. Drives the filter dropdowns.",
         "operationId": "list_endpoint_facets",
         "responses": {
           "200": {
@@ -12348,7 +12333,7 @@
         "tags": [
           "endpoints"
         ],
-        "summary": "Move an endpoint between groups, change its tags or its metadata.",
+        "summary": "Move an endpoint between groups or change its tags.",
         "description": "Operator or admin, and the endpoint must be in a group the key may write.\nA key limited to some groups may move it only into one of those (403\notherwise, nothing changes); `null` takes it out of its group. Answers the\nendpoint as it now stands.",
         "operationId": "update_endpoint",
         "parameters": [
@@ -15277,7 +15262,7 @@
         "tags": [
           "properties"
         ],
-        "summary": "The custom properties collected from an endpoint, in the order the\nOrganization set them up. Paged in memory (default 50 per page).",
+        "summary": "The custom properties of an endpoint, in the order the Organization set them\nup: the ones its agent collected, then the ones an admin sets (a choice list\nor free text; `property_type` is `choice_list` or `free_text`, and `value` is\nnull until one is set; the options of a choice list are on the property's\ndefinition). Paged in memory (default 50 per page).",
         "operationId": "list_endpoint_properties",
         "parameters": [
           {
@@ -15329,6 +15314,108 @@
           },
           "400": {
             "description": "A path or query parameter does not parse.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No credential, or one that is expired or revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key's role or group scope does not allow this read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The named resource does not exist in the caller's Organization.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The key's request budget is spent. `Retry-After` carries the seconds.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "format": "int64",
+                  "minimum": 0
+                },
+                "description": "Seconds to wait"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "properties"
+        ],
+        "summary": "Set an endpoint's operator-set properties: Department, Owner and the like.",
+        "description": "Admin or super admin, for an endpoint inside the caller's group scope. Every\nvalue is checked before any is written, so a refused one leaves the endpoint\nas it was; each value that changes is audited once with its old and new\nvalue, and the endpoint's dynamic groups are re-evaluated at once. A property\nthat is not an enabled operator-set one of the Organization is a 404; an\nagent-collected property cannot be set here.",
+        "operationId": "set_endpoint_properties",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Endpoint id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetEndpointPropertiesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The values are set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetEndpointPropertiesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A choice is not one of the property's options, or a text is longer than 500 characters",
             "content": {
               "application/json": {
                 "schema": {
@@ -19649,7 +19736,7 @@
           "install-keys"
         ],
         "summary": "Create an install key for the acting Organization.",
-        "description": "Admin or super admin. The response carries the full key, a secret that is\nshown once and never again: store it now.",
+        "description": "Admin or super admin. The response carries the full key, a secret that is\nshown once and never again: store it now. Every `field_values` entry is\nchecked as a value set on an endpoint is, before the key is written.",
         "operationId": "create_key",
         "requestBody": {
           "content": {
@@ -19673,7 +19760,7 @@
             }
           },
           "400": {
-            "description": "The body is not JSON, or `name` is empty or longer than 255 characters",
+            "description": "The body is not JSON, `name` is empty or longer than 255 characters, or a field value is not one of its property's options or is longer than 500 characters",
             "content": {
               "application/json": {
                 "schema": {
@@ -19694,6 +19781,26 @@
           },
           "403": {
             "description": "The key's role or group scope does not allow this read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "A `field_values` property is not an enabled operator-set property of the Organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The Organization already has an install key with this name (compared ignoring case)",
             "content": {
               "application/json": {
                 "schema": {
@@ -23210,6 +23317,203 @@
         ]
       }
     },
+    "/api/v1/patching/updates/{id}/hide": {
+      "post": {
+        "tags": [
+          "updates"
+        ],
+        "summary": "Hide a Windows update.",
+        "description": "Lists it as hidden for the Organization and flips every endpoint's pending\nrow (`missing`, `approved` or `failed`) to `hidden`, so no automation offers\nit. An endpoint that first reports the update later is stored hidden too. A\nkey limited to groups hides only the endpoints in those groups and lists\nnothing for the Organization (`scope` says which happened). Needs write\naccess. Windows updates only: any other id is `404`.",
+        "operationId": "hide_update",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Windows update id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "reason",
+            "in": "query",
+            "description": "Why the update is hidden, kept with the listing (at most 500 characters).",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The update is hidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HideUpdateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A path or query parameter does not parse.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No credential, or one that is expired or revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key's role or group scope does not allow this read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The named resource does not exist in the caller's Organization.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The key's request budget is spent. `Retry-After` carries the seconds.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "format": "int64",
+                  "minimum": 0
+                },
+                "description": "Seconds to wait"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/patching/updates/{id}/unhide": {
+      "post": {
+        "tags": [
+          "updates"
+        ],
+        "summary": "Show a hidden Windows update again.",
+        "description": "Deletes the Organization's listing and flips every `hidden` row back to\n`missing`, including rows a retired patch policy hid one endpoint at a time. A\nkey limited to groups flips only the endpoints in those groups and leaves the\nlisting, so an endpoint outside them, or one that first reports the update\nlater, still starts hidden. Needs write access. Windows updates only.",
+        "operationId": "unhide_update",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Windows update id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The update is shown again",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HideUpdateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A path or query parameter does not parse.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No credential, or one that is expired or revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key's role or group scope does not allow this read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The named resource does not exist in the caller's Organization.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The key's request budget is spent. `Retry-After` carries the seconds.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "format": "int64",
+                  "minimum": 0
+                },
+                "description": "Seconds to wait"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/policies/app-control": {
       "get": {
         "tags": [
@@ -24836,6 +25140,118 @@
           }
         }
       },
+      "put": {
+        "tags": [
+          "policies"
+        ],
+        "summary": "Edit a deployment policy.",
+        "description": "Admin, like creating one, and a key limited to groups may edit only a policy\nit created (403, the sentence says so). `PUT` replaces every authored field\n(name, description, rules, scope, cadence, maintenance windows, canary, offline\nexpiry, release-age hold) with the body, which is held to everything a create\nis: the same 422s, and a key narrower than its owner may name groups it is\nassigned and nothing else (403). The switch, the creator and the run history\nare not touched. `next_run_at` is recomputed from now only when the cadence\n(`frequency`, `time`, `timezone`, `clock`, `days_of_week`, `day_of_month`) changed on an\nenabled policy; any other edit leaves the schedule where it is, and a disabled\npolicy stays unscheduled. A run already underway is not affected. Answers the\npolicy as it now stands. Written to the audit log, naming the policy and the\nfields that changed.",
+        "operationId": "update_deployment_policy",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Deployment policy id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDeploymentPolicyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The policy as it now stands",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentPolicyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A path or query parameter does not parse.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No credential, or one that is expired or revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key's role or group scope does not allow this read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The named resource does not exist in the caller's Organization.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request is well formed, and the server refuses to act on it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The key's request budget is spent. `Retry-After` carries the seconds.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "format": "int64",
+                  "minimum": 0
+                },
+                "description": "Seconds to wait"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
       "delete": {
         "tags": [
           "policies"
@@ -26411,195 +26827,6 @@
         }
       }
     },
-    "/api/v1/policies/patch": {
-      "get": {
-        "tags": [
-          "policies"
-        ],
-        "summary": "The patch policies of this Organization.",
-        "description": "Any role. Default page size 50.",
-        "operationId": "list_patch_policies",
-        "parameters": [
-          {
-            "name": "page",
-            "in": "query",
-            "description": "Page number, 1-indexed.",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "default": 1,
-              "minimum": 1
-            }
-          },
-          {
-            "name": "per_page",
-            "in": "query",
-            "description": "Rows per page, clamped to 1-100.",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "default": 50,
-              "maximum": 100,
-              "minimum": 1
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "A page of patch policies",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PaginatedResponse_PatchPolicyResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "A path or query parameter does not parse.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No credential, or one that is expired or revoked.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The key's role or group scope does not allow this read.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "The key's request budget is spent. `Retry-After` carries the seconds.",
-            "headers": {
-              "Retry-After": {
-                "schema": {
-                  "type": "integer",
-                  "format": "int64",
-                  "minimum": 0
-                },
-                "description": "Seconds to wait"
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "policies"
-        ],
-        "summary": "Create a patch policy.",
-        "description": "Operator or admin. A key limited to groups must name groups or endpoints\ninside them: a policy naming none covers the whole Organization, which only\nan unlimited key may author (403). 422 when the name is blank or the\ndeferral is outside `0`-`90`. Written to the audit log.",
-        "operationId": "create_patch_policy",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreatePatchPolicyRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "The policy as created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PatchPolicyResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "A path or query parameter does not parse.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No credential, or one that is expired or revoked.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The key's role or group scope does not allow this read.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "The request is well formed, and the server refuses to act on it.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "The key's request budget is spent. `Retry-After` carries the seconds.",
-            "headers": {
-              "Retry-After": {
-                "schema": {
-                  "type": "integer",
-                  "format": "int64",
-                  "minimum": 0
-                },
-                "description": "Seconds to wait"
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/policies/patch-baselines": {
       "get": {
         "tags": [
@@ -27457,512 +27684,6 @@
         }
       }
     },
-    "/api/v1/policies/patch/{id}": {
-      "get": {
-        "tags": [
-          "policies"
-        ],
-        "summary": "One patch policy.",
-        "description": "Any role. 404 when the id is not a patch policy of this Organization.",
-        "operationId": "get_patch_policy",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "Patch policy id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "The policy",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PatchPolicyResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "A path or query parameter does not parse.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No credential, or one that is expired or revoked.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The key's role or group scope does not allow this read.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "The named resource does not exist in the caller's Organization.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "The key's request budget is spent. `Retry-After` carries the seconds.",
-            "headers": {
-              "Retry-After": {
-                "schema": {
-                  "type": "integer",
-                  "format": "int64",
-                  "minimum": 0
-                },
-                "description": "Seconds to wait"
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "policies"
-        ],
-        "summary": "Delete a patch policy.",
-        "description": "Operator or admin, and a key limited to groups needs every group and endpoint\nthe policy covers inside them (403). Copies of it in other Organizations are\nleft as local policies. 404 when the id is not a patch policy of this\nOrganization. Written to the audit log.",
-        "operationId": "delete_patch_policy",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "Patch policy id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "The policy is deleted",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "A path or query parameter does not parse.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No credential, or one that is expired or revoked.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The key's role or group scope does not allow this read.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "The named resource does not exist in the caller's Organization.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "The key's request budget is spent. `Retry-After` carries the seconds.",
-            "headers": {
-              "Retry-After": {
-                "schema": {
-                  "type": "integer",
-                  "format": "int64",
-                  "minimum": 0
-                },
-                "description": "Seconds to wait"
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          }
-        }
-      },
-      "patch": {
-        "tags": [
-          "policies"
-        ],
-        "summary": "Change a patch policy.",
-        "description": "Operator or admin, and a key limited to groups needs the policy, as it stands\nand as it would be after the change, inside them (403). Editing a source\npolicy's name, description, rules or deferral also rewrites every linked\ncopy. A linked copy's own name, description, rules and deferral are read-only\n(403): detach it first. Answers the policy as it now stands. Written to the\naudit log.",
-        "operationId": "update_patch_policy",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "Patch policy id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdatePatchPolicyRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "The policy as it now stands",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PatchPolicyResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "A path or query parameter does not parse.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No credential, or one that is expired or revoked.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The key's role or group scope does not allow this read.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "The named resource does not exist in the caller's Organization.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "The request is well formed, and the server refuses to act on it.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "The key's request budget is spent. `Retry-After` carries the seconds.",
-            "headers": {
-              "Retry-After": {
-                "schema": {
-                  "type": "integer",
-                  "format": "int64",
-                  "minimum": 0
-                },
-                "description": "Seconds to wait"
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/policies/patch/{id}/apply": {
-      "post": {
-        "tags": [
-          "policies"
-        ],
-        "summary": "Apply a patch policy to client Organizations as linked copies.",
-        "description": "Operator or admin with no group limit: applying covers whole Organizations.\nEach Organization gets a copy that follows this policy's content (enabled,\ncovering that whole Organization). All or nothing: an Organization that is\nout of reach or not a client of this one refuses the call (403), as does a\nkey with a group limit. 422 when no Organization is named, one already holds\na copy, or the policy is itself a copy (detach it first). 404 when the id is\nnot a patch policy of this Organization. An audit row is written in each\nOrganization.",
-        "operationId": "apply_patch_policy_to",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "Patch policy id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ApplyPatchPolicyRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "The copies written",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApplyPatchPolicyResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "A path or query parameter does not parse.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No credential, or one that is expired or revoked.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The key's role or group scope does not allow this read.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "The named resource does not exist in the caller's Organization.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "The request is well formed, and the server refuses to act on it.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "The key's request budget is spent. `Retry-After` carries the seconds.",
-            "headers": {
-              "Retry-After": {
-                "schema": {
-                  "type": "integer",
-                  "format": "int64",
-                  "minimum": 0
-                },
-                "description": "Seconds to wait"
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/policies/patch/{id}/detach": {
-      "post": {
-        "tags": [
-          "policies"
-        ],
-        "summary": "Make a linked copy a local patch policy.",
-        "description": "Operator or admin; a key limited to groups needs the copy's targets inside\nthem. The copy keeps its content and no source save touches it again. 404\nwhen the id is not a linked copy in this Organization. Written to the audit\nlog.",
-        "operationId": "detach_patch_policy_copy",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "Linked copy id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "The copy is a local policy",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PatchPolicyResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "A path or query parameter does not parse.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No credential, or one that is expired or revoked.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The key's role or group scope does not allow this read.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "The named resource does not exist in the caller's Organization.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "The key's request budget is spent. `Retry-After` carries the seconds.",
-            "headers": {
-              "Retry-After": {
-                "schema": {
-                  "type": "integer",
-                  "format": "int64",
-                  "minimum": 0
-                },
-                "description": "Seconds to wait"
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/policies/reboot": {
       "get": {
         "tags": [
@@ -28553,7 +28274,7 @@
           "policies"
         ],
         "summary": "Create a schedule.",
-        "description": "Operator or admin. A key limited to groups must name groups or endpoints\ninside them: a schedule naming none covers the whole Organization, which only\nan unlimited key may author (403). 422 when the name is blank, the task type\nis not one of the two, a time is not `HH:MM`, or the zone is not an IANA\nname. An enabled schedule is given its next run. Written to the audit log.",
+        "description": "Operator or admin. A key limited to groups must name groups or endpoints\ninside them: a schedule naming none covers the whole Organization, which only\nan unlimited key may author (403). 422 when the name is blank, the task type\nis not one of the two, a time is not `HH:MM`, the zone is not an IANA\nname, a weekday is outside 0 to 6 or a weekly schedule names none, or the\nday of the month is outside 1 to 28. An enabled schedule is given its next run. Written to the audit log.",
         "operationId": "create_schedule",
         "requestBody": {
           "content": {
@@ -29527,7 +29248,7 @@
           "properties"
         ],
         "summary": "Create a property definition.",
-        "description": "Admin or super admin, as the Properties page. The agent reads it as SYSTEM on\nevery endpoint, so the params are checked: each method needs its own boxes,\nand a WMI query is refused (400) outside the allowed namespaces. 400 for a bad\nname or params; 409 when another definition has the name. Written to the audit\nlog.",
+        "description": "Admin or super admin, as the Properties page. The agent reads it as SYSTEM on\nevery endpoint, so the params are checked: each method needs its own boxes,\nand a WMI query is refused (400) outside the allowed namespaces. A\n`choice_list` or `free_text` property is never sent to an agent; an admin sets\nits value on the device page. 400 for a bad name, params or choices; 409 when\nanother definition has the name. Written to the audit log.",
         "operationId": "create_property_definition",
         "requestBody": {
           "content": {
@@ -29711,7 +29432,7 @@
           "properties"
         ],
         "summary": "Replace a property definition.",
-        "description": "Admin or super admin. The whole definition is replaced: the method, its params\nand every flag, and an omitted `description` is cleared. The values endpoints\nalready reported stay until they next report. 400 for a bad name or params,\n404 when the id is not a definition of this Organization, 409 when another one\nhas the name. Written to the audit log.",
+        "description": "Admin or super admin. The whole definition is replaced: the method and its\nparams, or the choices, and every flag, and an omitted `description` is\ncleared. The values endpoints already reported stay until they next report. A\nproperty keeps its kind: an agent-collected one may change its method, never\nbecome `choice_list` or `free_text`, and those two never change into each\nother (400). 400 for a bad name, params or choices, 404 when the id is not a\ndefinition of this Organization, 409 when another one has the name. Written to\nthe audit log.",
         "operationId": "replace_property_definition",
         "parameters": [
           {
@@ -38506,29 +38227,6 @@
           }
         }
       },
-      "AppliedPatchCopy": {
-        "type": "object",
-        "description": "One copy an apply wrote.",
-        "required": [
-          "organization_id",
-          "organization",
-          "policy_id"
-        ],
-        "properties": {
-          "organization": {
-            "type": "string"
-          },
-          "organization_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "policy_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "The linked copy, in that Organization."
-          }
-        }
-      },
       "ApplyMaintenanceWindowRequest": {
         "type": "object",
         "description": "The Organizations to apply a window to.",
@@ -38558,44 +38256,6 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/AppliedCopy"
-            }
-          },
-          "revision": {
-            "type": "integer",
-            "format": "int64",
-            "description": "The source revision every copy carries."
-          }
-        }
-      },
-      "ApplyPatchPolicyRequest": {
-        "type": "object",
-        "description": "The Organizations to apply a patch policy to.",
-        "required": [
-          "organization_ids"
-        ],
-        "properties": {
-          "organization_ids": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Client Organizations of this one. At least one."
-          }
-        },
-        "additionalProperties": false
-      },
-      "ApplyPatchPolicyResponse": {
-        "type": "object",
-        "required": [
-          "revision",
-          "copies"
-        ],
-        "properties": {
-          "copies": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AppliedPatchCopy"
             }
           },
           "revision": {
@@ -39458,7 +39118,6 @@
         "type": "object",
         "description": "The endpoints to act on and the action.",
         "required": [
-          "endpoint_ids",
           "action"
         ],
         "properties": {
@@ -39472,7 +39131,23 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "1 to 500 endpoints."
+            "description": "1 to 500 endpoints. Send this or `filter`, not both."
+          },
+          "expected_count": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "**Required with `filter`** (`400` without it): how many endpoints the caller\nsaw the filter match. The server drops a filter key it does not know, as the\nlist does, so a typo (`statsu=offline`) would otherwise widen to every\nendpoint; the count catches it. When the filter now matches a different\nnumber, nothing is queued and the answer is `409` naming the new count, so a\nconfirm that said \"N endpoints\" never acts on a different N. Ignored with\n`endpoint_ids`.",
+            "minimum": 0
+          },
+          "filter": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Every endpoint a list matches, instead of ids: the `/endpoints` list's own\nquery string, for example `status=offline&tag=Prod&os_family=linux`. The\nserver reads it as the list does (an unknown key or value is dropped, as\nthere; sorting and paging are ignored), inside the key's Organization, and\nacts on all of them with no 500 cap. An id the key may not write is skipped,\nas for `endpoint_ids`. A filter that matches nothing acts on nothing and\nanswers `tasks_created: 0`. An empty filter is the whole unfiltered list.\nRequires `expected_count`."
           },
           "reason": {
             "type": [
@@ -39673,7 +39348,6 @@
         "type": "object",
         "description": "The endpoints to retag and how.",
         "required": [
-          "endpoint_ids",
           "action",
           "tag_ids"
         ],
@@ -39688,7 +39362,23 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "1 to 500 endpoints."
+            "description": "1 to 500 endpoints. Send this or `filter`, not both."
+          },
+          "expected_count": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Required with `filter`: how many endpoints the list showed\n(`BulkActionsRequest.expected_count`).",
+            "minimum": 0
+          },
+          "filter": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Every endpoint a list matches, instead of ids: the list's query string\n(`status=offline&tag=Prod`; see `BulkActionsRequest.filter`). Requires\n`expected_count`."
           },
           "tag_ids": {
             "type": "array",
@@ -40892,19 +40582,6 @@
           "skipped"
         ]
       },
-      "CollectionMethodWire": {
-        "type": "string",
-        "description": "How an endpoint's agent collects a custom property's value. Treat an unknown\nvalue as unknown.",
-        "enum": [
-          "file_version",
-          "file_exists",
-          "file_hash",
-          "registry_value",
-          "registry_exists",
-          "environment_variable",
-          "wmi_query"
-        ]
-      },
       "ComplianceResultListItem": {
         "type": "object",
         "description": "Compliance result item for list view.",
@@ -41645,7 +41322,7 @@
       },
       "CreateDeploymentPolicyRequest": {
         "type": "object",
-        "description": "A new recurring deployment policy. It is created enabled, and runs with the\nauthority of the user the key acts as.",
+        "description": "A recurring deployment policy as authored: the body of a create, and of an\nedit, which replaces every field of it. A new policy is created enabled and\nruns with the authority of the user the key acts as.",
         "required": [
           "name",
           "rules",
@@ -41660,6 +41337,10 @@
             ],
             "format": "int32",
             "description": "At least 1."
+          },
+          "clock": {
+            "$ref": "#/components/schemas/ScheduleClockWire",
+            "description": "`shared` (one clock for all devices, in `timezone`) or `endpoint_local`\n(each device's own clock; `timezone` is for a device that has not reported\nits own). Defaults to `shared`."
           },
           "day_of_month": {
             "type": "integer",
@@ -41798,7 +41479,7 @@
               "object",
               "null"
             ],
-            "description": "Makes the group dynamic: its members are the endpoints this rule\nmatches, re-evaluated as endpoints check in. Omit or null for a group\nyou place endpoints in by hand.\n\n`{\"match_mode\": \"all\" | \"any\", \"conditions\": [...]}`, each condition\neither `{\"field\", \"operator\", \"value\"}` or a nested rule of the same\nshape. `operator` is one of `equals`, `not_equals`, `contains`,\n`not_contains`, `starts_with`, `ends_with`, `greater_than`, `less_than`,\n`is_empty`, `is_not_empty`, `has_tag`. `field` is `hostname`, `os_name`,\n`os_version`, `os_arch`, `os_family` (`windows` or `linux`), `os_line`,\n`agent_version`, `status`, `tag` (with `has_tag`), or\n`metadata.<key>`, `hardware.<key>`, `property.<name>`."
+            "description": "Makes the group dynamic: its members are the endpoints this rule\nmatches, re-evaluated as endpoints check in. Omit or null for a group\nyou place endpoints in by hand.\n\n`{\"match_mode\": \"all\" | \"any\", \"conditions\": [...]}`, each condition\neither `{\"field\", \"operator\", \"value\"}` or a nested rule of the same\nshape. `operator` is one of `equals`, `not_equals`, `contains`,\n`not_contains`, `starts_with`, `ends_with`, `greater_than`, `less_than`,\n`is_empty`, `is_not_empty`, `has_tag`. `field` is `hostname`, `os_name`,\n`os_version`, `os_arch`, `os_family` (`windows` or `linux`), `os_line`,\n`agent_version`, `status`, `purpose` (`production`, `test` or `lab`),\n`tag` (with `has_tag`), or `hardware.<key>`, `property.<name>` (a custom\nproperty, agent-collected or operator-set, such as `property.Owner`)."
           }
         },
         "additionalProperties": false
@@ -41816,6 +41497,13 @@
             ],
             "format": "date-time",
             "description": "Optional expiry timestamp. `None` (default) means the key never expires."
+          },
+          "field_values": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KeyFieldValueRequest"
+            },
+            "description": "Operator-set properties set on every endpoint this key enrolls, as an\nadmin would set them on the device page. Empty (default) sets none."
           },
           "group_id": {
             "type": [
@@ -42091,56 +41779,6 @@
         },
         "additionalProperties": false
       },
-      "CreatePatchPolicyRequest": {
-        "type": "object",
-        "description": "A new patch policy.",
-        "required": [
-          "name"
-        ],
-        "properties": {
-          "deferral_days": {
-            "type": "integer",
-            "format": "int32",
-            "description": "Days an endpoint may defer an update the rules do not decide, `0` to `90`.\nDefaults to `0`."
-          },
-          "description": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "enabled": {
-            "type": "boolean",
-            "description": "Defaults to `true`."
-          },
-          "endpoint_ids": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          "group_ids": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Groups of this Organization. A group-limited key must name groups or\nendpoints it may write; with neither, the policy covers the whole\nOrganization."
-          },
-          "name": {
-            "type": "string"
-          },
-          "rules": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PatchRuleRequest"
-            },
-            "description": "Read in order. Defaults to none."
-          }
-        },
-        "additionalProperties": false
-      },
       "CreateProxyRequest": {
         "type": "object",
         "description": "A proxy to create.",
@@ -42246,6 +41884,25 @@
           "execution_time"
         ],
         "properties": {
+          "day_of_month": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The day of the month a monthly schedule runs, 1 to 28. Defaults to the 1st.\nIgnored for the other frequencies."
+          },
+          "days_of_week": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "description": "The days a weekly schedule runs, `0` (Sunday) to `6` (Saturday), at least\none. Defaults to Monday to Friday. Ignored for the other frequencies."
+          },
           "description": {
             "type": [
               "string",
@@ -42269,7 +41926,7 @@
           },
           "frequency": {
             "$ref": "#/components/schemas/ScheduleFrequencyWire",
-            "description": "`weekly` runs Monday to Friday and `monthly` on the 1st."
+            "description": "`weekly` runs on `days_of_week` (Monday to Friday when absent) and\n`monthly` on `day_of_month` (the 1st when absent)."
           },
           "group_ids": {
             "type": "array",
@@ -43524,6 +43181,7 @@
           "frequency",
           "time",
           "timezone",
+          "clock",
           "days_of_week",
           "day_of_month",
           "respect_maintenance_windows",
@@ -43544,6 +43202,10 @@
             ],
             "format": "int32",
             "description": "Deploy to this many endpoints first, and the rest once they succeed."
+          },
+          "clock": {
+            "$ref": "#/components/schemas/ScheduleClockWire",
+            "description": "Whose clock `time` is read on: one clock for all devices, or each device's own."
           },
           "created_at": {
             "type": "string",
@@ -43646,7 +43308,7 @@
           },
           "timezone": {
             "type": "string",
-            "description": "An IANA zone name."
+            "description": "An IANA zone name: the one clock's zone under `clock: shared`, and the zone a\ndevice that has not reported its own follows under `endpoint_local`."
           },
           "updated_at": {
             "type": "string",
@@ -43682,6 +43344,13 @@
                   "type": "string"
                 },
                 "description": "`critical`, `high`, `medium` or `low`."
+              },
+              "skip": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DeploymentSkip"
+                },
+                "description": "Updates and apps this rule leaves out. Each must be known to the\nOrganization (an update one of its endpoints has reported, an app in\nthe catalogue) and listed once. Empty skips nothing."
               }
             }
           },
@@ -43833,6 +43502,49 @@
           }
         },
         "additionalProperties": false
+      },
+      "DeploymentSkip": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "A Windows update, by its update id (Microsoft's GUID for the update).",
+            "required": [
+              "update_id",
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "windows_update"
+                ]
+              },
+              "update_id": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A catalogue app, by its winget id.",
+            "required": [
+              "winget_id",
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "app"
+                ]
+              },
+              "winget_id": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "description": "One update or app a missing-patches rule leaves out."
       },
       "DesiredStateWire": {
         "type": "string",
@@ -44596,8 +44308,6 @@
         "required": [
           "status",
           "os_name",
-          "criticality",
-          "environment",
           "kev",
           "critical_vuln",
           "drift",
@@ -44609,21 +44319,9 @@
             "type": "integer",
             "format": "int64"
           },
-          "criticality": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/FacetBucket"
-            }
-          },
           "drift": {
             "type": "integer",
             "format": "int64"
-          },
-          "environment": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/FacetBucket"
-            }
           },
           "kev": {
             "type": "integer",
@@ -44993,78 +44691,6 @@
           }
         }
       },
-      "EndpointMetadataRequest": {
-        "type": "object",
-        "description": "Operator-maintained metadata. A change replaces the whole object: a field\nleft out is cleared.",
-        "properties": {
-          "business_unit": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "criticality": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "environment": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "location": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "owner": {
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        }
-      },
-      "EndpointMetadataResponse": {
-        "type": "object",
-        "description": "Operator-maintained endpoint metadata. Unset fields are omitted.",
-        "properties": {
-          "business_unit": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "criticality": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "environment": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "location": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "owner": {
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        }
-      },
       "EndpointPostureResponse": {
         "type": "object",
         "description": "An endpoint's latest stored posture snapshot.",
@@ -45144,7 +44770,6 @@
           "group_id",
           "agent_version",
           "pending_reboot",
-          "metadata",
           "created_at",
           "updated_at",
           "ws_transport",
@@ -45231,9 +44856,6 @@
             "items": {
               "type": "string"
             }
-          },
-          "metadata": {
-            "$ref": "#/components/schemas/EndpointMetadataResponse"
           },
           "os_arch": {
             "type": [
@@ -46375,7 +45997,7 @@
           },
           "report_type": {
             "type": "string",
-            "description": "One of `compliance`, `vulnerability`, `executive`, `software`,\n`patch_status`, or a framework attestation: `pci_dss_v4`,\n`soc2_type1`, `hipaa`, `cmmc_l1`, `cmmc_l2`, `cyber_essentials_v3`.",
+            "description": "One of `compliance`, `vulnerability`, `executive`, `software`,\n`patch_status`, or a framework attestation: `pci_dss_v4`,\n`soc2_type1`, `hipaa`, `cmmc_l1`, `cmmc_l2`, `cyber_essentials_v3`,\n`iso27001_annex_a`, `essential_eight`.",
             "example": "compliance"
           }
         },
@@ -46533,6 +46155,39 @@
           }
         }
       },
+      "HideReach": {
+        "type": "string",
+        "description": "How far a hide or unhide reached.",
+        "enum": [
+          "organization",
+          "groups"
+        ]
+      },
+      "HideUpdateResponse": {
+        "type": "object",
+        "description": "What a hide or unhide did.",
+        "required": [
+          "endpoints",
+          "scope",
+          "listing_changed"
+        ],
+        "properties": {
+          "endpoints": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Endpoints whose row for this update changed state.",
+            "minimum": 0
+          },
+          "listing_changed": {
+            "type": "boolean",
+            "description": "Whether the Organization-wide listing was written (hide) or deleted\n(unhide). Always `false` for a key limited to groups."
+          },
+          "scope": {
+            "$ref": "#/components/schemas/HideReach",
+            "description": "How far it reached."
+          }
+        }
+      },
       "HostPrecondition": {
         "type": "object",
         "required": [
@@ -46677,6 +46332,53 @@
           }
         }
       },
+      "KeyFieldValue": {
+        "type": "object",
+        "description": "One operator-set property an install key sets on every endpoint it enrolls.",
+        "required": [
+          "property_id",
+          "property_name",
+          "property_type",
+          "value"
+        ],
+        "properties": {
+          "property_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "property_name": {
+            "type": "string"
+          },
+          "property_type": {
+            "type": "string",
+            "description": "`choice_list` or `free_text`."
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "KeyFieldValueRequest": {
+        "type": "object",
+        "description": "One operator-set property an install key sets at enrolment.",
+        "required": [
+          "property_id"
+        ],
+        "properties": {
+          "property_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "An enabled operator-set property of the Organization."
+          },
+          "value": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A choice-list property takes one of its options (any capitals); free\ntext up to 500 characters. Null or blank sets nothing."
+          }
+        }
+      },
       "KeyListItem": {
         "type": "object",
         "description": "An install key's metadata. The key value is never served again.",
@@ -46691,12 +46393,20 @@
           "created_at",
           "expires_at",
           "is_expired",
-          "tag_names"
+          "last_used_at",
+          "enrolled_endpoints",
+          "tag_names",
+          "field_values"
         ],
         "properties": {
           "created_at": {
             "type": "string",
             "description": "RFC 3339."
+          },
+          "enrolled_endpoints": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Endpoints in the listed fleet that enrolled with this key: not\ndecommissioned, inactive or awaiting approval."
           },
           "expires_at": {
             "type": [
@@ -46704,6 +46414,13 @@
               "null"
             ],
             "description": "RFC 3339, or null when the key never expires."
+          },
+          "field_values": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KeyFieldValue"
+            },
+            "description": "The enabled operator-set properties this key sets on every endpoint it\nenrolls, in the Organization's display order. Empty when it sets none."
           },
           "group_id": {
             "type": [
@@ -46734,7 +46451,14 @@
           },
           "key_prefix": {
             "type": "string",
-            "description": "`frt_` + four hex characters. There is no full value to serve (#3563)."
+            "description": "`pik_` + four hex characters (`frt_` on a key an earlier release\nminted). There is no full value to serve (#3563)."
+          },
+          "last_used_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "RFC 3339: when the key last enrolled an endpoint, or null when it has not."
           },
           "name": {
             "type": "string"
@@ -48811,27 +48535,6 @@
           }
         }
       },
-      "PaginatedResponse_PatchPolicyResponse": {
-        "type": "object",
-        "description": "Paginated response wrapper.",
-        "required": [
-          "data",
-          "pagination"
-        ],
-        "properties": {
-          "data": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PatchPolicyResponse"
-            },
-            "description": "The items for the current page"
-          },
-          "pagination": {
-            "$ref": "#/components/schemas/PaginationMeta",
-            "description": "Pagination metadata"
-          }
-        }
-      },
       "PaginatedResponse_PinResponse": {
         "type": "object",
         "description": "Paginated response wrapper.",
@@ -49390,85 +49093,6 @@
           }
         }
       },
-      "PatchPolicyResponse": {
-        "type": "object",
-        "description": "A patch policy.",
-        "required": [
-          "id",
-          "name",
-          "description",
-          "enabled",
-          "deferral_days",
-          "rules",
-          "group_ids",
-          "endpoint_ids",
-          "source_revision",
-          "created_at",
-          "updated_at"
-        ],
-        "properties": {
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "deferral_days": {
-            "type": "integer",
-            "format": "int32",
-            "description": "Days an endpoint may defer an update the rules do not decide, `0` to `90`."
-          },
-          "description": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Null when none was given."
-          },
-          "enabled": {
-            "type": "boolean"
-          },
-          "endpoint_ids": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "The endpoints it covers."
-          },
-          "group_ids": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "The groups it covers. With no endpoints either, it covers the whole\nOrganization."
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string"
-          },
-          "rules": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PatchRuleResponse"
-            }
-          },
-          "source_revision": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "format": "int64",
-            "description": "Set when this policy is a linked copy of another Organization's policy:\nthe source revision it carries. A copy's name, description, rules and\ndeferral are its source's and are read-only until it is detached; its\ntargets and `enabled` stay its own."
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
       "PatchPostureActionRequest": {
         "type": "object",
         "description": "A change to an action. A field left out stays as it is; the fields that can\nbe cleared also take an explicit `null`.",
@@ -49517,70 +49141,6 @@
               "null"
             ],
             "description": "`open`, `scheduled`, `snoozed`, `risk_accepted` or `done`. Anything else\nanswers `400`."
-          }
-        }
-      },
-      "PatchRuleRequest": {
-        "type": "object",
-        "description": "One rule of a patch policy, as it is written. Rules are read in order.",
-        "required": [
-          "action"
-        ],
-        "properties": {
-          "action": {
-            "$ref": "#/components/schemas/RuleAction"
-          },
-          "category": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/RuleCategory",
-                "description": "Absent or null matches any classification."
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "severity": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/RuleSeverity",
-                "description": "Absent or null matches any severity."
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "additionalProperties": false
-      },
-      "PatchRuleResponse": {
-        "type": "object",
-        "description": "One rule of a patch policy, as it is stored.",
-        "required": [
-          "severity",
-          "category",
-          "action"
-        ],
-        "properties": {
-          "action": {
-            "type": "string",
-            "description": "`auto_approve` or `reject`."
-          },
-          "category": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "`security_updates`, `critical_updates`, `definition_updates`,\n`update_rollups`, `service_packs`, `feature_packs`, `tools` or `drivers`;\nnull matches any."
-          },
-          "severity": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "`critical`, `important`, `moderate`, `low` or `unspecified`; null matches\nany. A rule stored by hand before this API existed can carry another\nspelling, which is reported as stored."
           }
         }
       },
@@ -50036,13 +49596,17 @@
           "snooze_until",
           "risk_accept_expires",
           "risk_accept_reason",
+          "risk_accepted_by",
+          "risk_accepted_by_name",
+          "risk_accepted_at",
           "first_seen_at",
           "last_seen_at",
           "completed_at",
           "freeze_hold",
           "auto_fixable",
           "auto_action_type",
-          "auto_source_id"
+          "auto_source_id",
+          "no_fix"
         ],
         "properties": {
           "action_key": {
@@ -50112,6 +49676,10 @@
             "format": "date-time",
             "description": "When the generator last changed this action's content (title, gain,\naffected count, effort, impact, auto-fix) or reopened it. An unchanged\naction keeps its value across passes, so it is not a \"still seen\" time."
           },
+          "no_fix": {
+            "type": "boolean",
+            "description": "A CVE action no open finding of which has a fix, as the last regeneration\npass found it: the row reads \"Accept risk for CVE-…\" with \"No fix\navailable\". `false` for every other kind of action."
+          },
           "owner_user_id": {
             "type": [
               "string",
@@ -50138,6 +49706,29 @@
               "string",
               "null"
             ]
+          },
+          "risk_accepted_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When the risk was accepted. Null on the same cases as `risk_accepted_by`\n(an acceptance the record has no date for)."
+          },
+          "risk_accepted_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The user who accepted the risk. Null when the risk is not accepted, when\nthe acceptance predates the record, or when that user was since removed."
+          },
+          "risk_accepted_by_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The approver's display name, else their email."
           },
           "scheduled_at": {
             "type": [
@@ -50901,10 +50492,16 @@
         "description": "A definition to create, or the whole of what one is replaced with.",
         "required": [
           "name",
-          "property_type",
-          "params"
+          "property_type"
         ],
         "properties": {
+          "choices": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "A `choice_list`'s options, in order: 1 to 100, each 1 to 100 characters,\nnone repeated ignoring case. Refused for every other type. On a replace,\nan option kept under another case renames every endpoint's value with it,\nand an option left out is cleared from every endpoint."
+          },
           "description": {
             "type": [
               "string",
@@ -50926,10 +50523,11 @@
             "description": "1 to 100 characters. Unique in the Organization."
           },
           "params": {
-            "$ref": "#/components/schemas/PropertyParams"
+            "$ref": "#/components/schemas/PropertyParams",
+            "description": "Omit it for `choice_list` and `free_text`."
           },
           "property_type": {
-            "$ref": "#/components/schemas/CollectionMethodWire"
+            "$ref": "#/components/schemas/PropertyTypeWire"
           },
           "visible_by_default": {
             "type": "boolean",
@@ -50947,6 +50545,7 @@
           "description",
           "property_type",
           "params",
+          "choices",
           "enabled",
           "visible_by_default",
           "display_order",
@@ -50954,6 +50553,13 @@
           "updated_at"
         ],
         "properties": {
+          "choices": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "A `choice_list`'s options, in the order the device page offers them.\nEmpty for every other type."
+          },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -50982,10 +50588,10 @@
           },
           "params": {
             "type": "object",
-            "description": "What the agent reads, as stored: the keys `property_type` names."
+            "description": "What the agent reads, as stored: the keys `property_type` names. `{}`\nfor `choice_list` and `free_text`."
           },
           "property_type": {
-            "$ref": "#/components/schemas/CollectionMethodWire"
+            "$ref": "#/components/schemas/PropertyTypeWire"
           },
           "updated_at": {
             "type": "string",
@@ -50999,7 +50605,7 @@
       },
       "PropertyParams": {
         "type": "object",
-        "description": "The boxes a collection method reads. Send the ones `property_type` names, and\nleave the rest out.",
+        "description": "The boxes a collection method reads. Send the ones `property_type` names, and\nleave the rest out; `choice_list` and `free_text` read none.",
         "properties": {
           "class": {
             "type": [
@@ -51059,6 +50665,21 @@
           }
         },
         "additionalProperties": false
+      },
+      "PropertyTypeWire": {
+        "type": "string",
+        "description": "What a custom property is: how an endpoint's agent collects its value, or\n(`choice_list`, `free_text`) that an admin sets it on the device page and no\nagent ever reads it. Treat an unknown value as unknown.",
+        "enum": [
+          "file_version",
+          "file_exists",
+          "file_hash",
+          "registry_value",
+          "registry_exists",
+          "environment_variable",
+          "wmi_query",
+          "choice_list",
+          "free_text"
+        ]
       },
       "PropertyValueResponse": {
         "type": "object",
@@ -52644,28 +52265,6 @@
           }
         }
       },
-      "RuleAction": {
-        "type": "string",
-        "description": "What a rule does with an update it matches. An update no rule matches is\nleft for an operator to decide.",
-        "enum": [
-          "auto_approve",
-          "reject"
-        ]
-      },
-      "RuleCategory": {
-        "type": "string",
-        "description": "What a rule matches on Windows Update classification.",
-        "enum": [
-          "security_updates",
-          "critical_updates",
-          "definition_updates",
-          "update_rollups",
-          "service_packs",
-          "feature_packs",
-          "tools",
-          "drivers"
-        ]
-      },
       "RuleEndpointsResponse": {
         "type": "object",
         "description": "How the endpoints stand against one rule.",
@@ -52700,17 +52299,6 @@
             "description": "Null when the rule is unknown."
           }
         }
-      },
-      "RuleSeverity": {
-        "type": "string",
-        "description": "What a rule matches on severity. Treat an unknown value as unknown: a rule\nstored before this API existed may carry a spelling outside this list.",
-        "enum": [
-          "critical",
-          "important",
-          "moderate",
-          "low",
-          "unspecified"
-        ]
       },
       "RunDeploymentPolicyResponse": {
         "type": "object",
@@ -52888,6 +52476,14 @@
             "description": "`manual` or `scheduled`. Treat any other value as unknown."
           }
         }
+      },
+      "ScheduleClockWire": {
+        "type": "string",
+        "description": "Whose clock a recurring schedule's time of day is read on. A request names\nit, a response reports it. Treat an unknown value as unknown.",
+        "enum": [
+          "shared",
+          "endpoint_local"
+        ]
       },
       "ScheduleFrequencyWire": {
         "type": "string",
@@ -53717,6 +53313,44 @@
         },
         "additionalProperties": false
       },
+      "SetEndpointPropertiesRequest": {
+        "type": "object",
+        "description": "The values to set on one endpoint.",
+        "required": [
+          "values"
+        ],
+        "properties": {
+          "values": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SetPropertyValue"
+            }
+          }
+        }
+      },
+      "SetEndpointPropertiesResponse": {
+        "type": "object",
+        "description": "What a set did.",
+        "required": [
+          "changed",
+          "properties"
+        ],
+        "properties": {
+          "changed": {
+            "type": "integer",
+            "format": "int32",
+            "description": "How many values changed. A value already held counts as none.",
+            "minimum": 0
+          },
+          "properties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PropertyValueResponse"
+            },
+            "description": "The endpoint's operator-set properties now."
+          }
+        }
+      },
       "SetPasswordRequest": {
         "type": "object",
         "description": "The account and its new password.",
@@ -53773,6 +53407,27 @@
           }
         },
         "additionalProperties": false
+      },
+      "SetPropertyValue": {
+        "type": "object",
+        "description": "One operator-set field and the value to give it.",
+        "required": [
+          "property_id"
+        ],
+        "properties": {
+          "property_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "An enabled operator-set property of the Organization."
+          },
+          "value": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A choice-list field takes one of its options (any capitals); free text up\nto 500 characters. Null or blank clears the value."
+          }
+        }
       },
       "SetPsaCompanyRequest": {
         "type": "object",
@@ -55557,7 +55212,7 @@
       },
       "UpdateEndpointRequest": {
         "type": "object",
-        "description": "A change to an endpoint. A field left out stays as it is.",
+        "description": "A change to an endpoint. A field left out stays as it is. Any other field is\nrefused: `metadata` is retired (#8487), and what an admin records about an\nendpoint is set with `PUT /api/v1/endpoints/{id}/properties`.",
         "properties": {
           "group_id": {
             "type": [
@@ -55566,17 +55221,6 @@
             ],
             "format": "uuid",
             "description": "The group to move the endpoint into. An explicit `null` removes it from\nits group."
-          },
-          "metadata": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/EndpointMetadataRequest",
-                "description": "The metadata the endpoint ends up with."
-              },
-              {
-                "type": "null"
-              }
-            ]
           },
           "tag_ids": {
             "type": [
@@ -55589,7 +55233,8 @@
             },
             "description": "The tags the endpoint ends up with. They replace its current tags."
           }
-        }
+        },
+        "additionalProperties": false
       },
       "UpdateFeaturePolicyRequest": {
         "type": "object",
@@ -55883,71 +55528,6 @@
         },
         "additionalProperties": false
       },
-      "UpdatePatchPolicyRequest": {
-        "type": "object",
-        "description": "A change to a patch policy. Absent fields stay as they are.",
-        "properties": {
-          "deferral_days": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "format": "int32"
-          },
-          "description": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "An explicit `null` clears it."
-          },
-          "enabled": {
-            "type": [
-              "boolean",
-              "null"
-            ]
-          },
-          "endpoint_ids": {
-            "type": [
-              "array",
-              "null"
-            ],
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "The endpoints it ends up covering. They replace the current ones."
-          },
-          "group_ids": {
-            "type": [
-              "array",
-              "null"
-            ],
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "The groups it ends up covering. They replace the current ones."
-          },
-          "name": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "rules": {
-            "type": [
-              "array",
-              "null"
-            ],
-            "items": {
-              "$ref": "#/components/schemas/PatchRuleRequest"
-            },
-            "description": "The rules it ends up with. They replace the current ones."
-          }
-        },
-        "additionalProperties": false
-      },
       "UpdateProfileRequest": {
         "type": "object",
         "description": "A field left out stays as it is. `email` may be sent back as it stands; a\ndifferent one is refused (403), because an administrator changes it.",
@@ -56079,6 +55659,25 @@
         "type": "object",
         "description": "A change to a schedule. Absent fields stay as they are.",
         "properties": {
+          "day_of_month": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The day of the month a monthly schedule runs, 1 to 28. Absent keeps it\nwhile the frequency stands; a change to `monthly` without it is the 1st."
+          },
+          "days_of_week": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "description": "The days a weekly schedule runs, `0` (Sunday) to `6`. Absent keeps them\nwhile the frequency stands; a change to `weekly` without them is Monday to\nFriday."
+          },
           "description": {
             "type": [
               "string",

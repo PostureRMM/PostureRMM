@@ -66,6 +66,26 @@ one-liner, so no one on the path can rewrite a SYSTEM script; a labelled
 `http://` form below it serves Windows Server 2016, whose PowerShell cannot
 complete the HTTPS fetch.
 
+**Install agent** says which of these applies to your server. Under a
+self-signed certificate its *Is this safe?* line explains that the first
+download is plain HTTP because a new endpoint cannot check the server's own
+certificate yet, and that putting a trusted certificate in front of the server
+(Let's Encrypt or your own CA) makes the command `https://` by itself.
+
+**Download and verify** is the same command with a check in front of it, for
+reviewers who want the script pinned before it runs as SYSTEM or root. It
+downloads `install.ps1` (Windows) or `install-agent.sh` (Linux) over the same
+hop, compares the script's SHA-256 with the value printed on the HTTPS page and
+runs it only on a match; on a mismatch it stops with an error and runs nothing.
+Windows uses `Get-FileHash`, which PowerShell 5.1 and Server 2016 have; Linux
+uses `sha256sum -c`. The hash is of the script this server hands out, not of the
+agent package, and the script carries your server address, trust anchor, the
+current agent release and, for a keyed command, the install key. So the hash
+changes with each agent upgrade and with each key: copy the command from the
+page or the key dialog each time, never from an old note. A release that lands
+between loading the page and running the command also fails the check; reload
+and copy again.
+
 [configuration.md](configuration.md) covers bringing your own certificate. If your
 *edge* (a reverse proxy, a tunnel) terminates TLS with a certificate the backend
 never generated, set `POSTURERMM_SERVER__AGENT_TRUST_MODE=system_roots`.
@@ -250,6 +270,14 @@ the UI.
    one-liner still enrolls, inert, until you admit the endpoint from Endpoints.
    `POSTURERMM_SERVER__ALLOW_AUTO_ENROLLMENT=true` admits keyless enrollments
    instantly: a trusted-LAN convenience, an open door on anything internet-facing.
+   A key is shown in full once, when it is created or rotated; the server keeps
+   only a hash. Keys you create start `pik_`; keys from earlier releases start
+   `frt_` and keep working. Key names are unique within an organization. A second
+   rollout takes **New key** (same group and tags, its own command), which leaves
+   the first key working; **Rotate** replaces a key and stops every script that
+   carries the old one. The Keys list shows each key's Expires, Enrolled (the
+   endpoints in your fleet list that enrolled with it) and Last used, so a live
+   key reads differently from an abandoned one.
 2. **Run the one-liner** on the target Windows endpoint (elevated PowerShell):
    ```powershell
    irm "http://posturermm.example.com/install.ps1?key=..." | iex
@@ -289,7 +317,9 @@ curl -fsSL http://posturermm.example.com/install-agent.sh | sudo sh            #
 ```
 
 It follows Windows' scheme rule without the Server 2016 fallback, with the same
-[trust caveat](#tls-and-agent-trust). The script refuses an unsupported host,
+[trust caveat](#tls-and-agent-trust) and the same **Download and verify** option
+(`curl -fsSL -o "$f" … && echo "<sha256>  $f" | sha256sum -c - && sudo sh "$f"`, with
+`wget -qO` for hosts without curl). The script refuses an unsupported host,
 checks the package's SHA-256, writes `/etc/posturermm/agent.conf` (mode 0600) and
 the install key, and installs the `.deb` or `.rpm`, which starts
 `posturermm-agent.service`.
@@ -497,6 +527,11 @@ runs in bounded batches, and pruning the audit log writes one more audit row
 sink has not yet received are never pruned; the run logs how many. A run that
 cannot read all four windows prunes nothing and logs the key at fault, not
 falling back to the defaults; save a real number and the next run recovers.
+
+A restart does not postpone the job: when the server starts, a job that is
+overdue runs within a few minutes of boot, and one that ran recently waits out the
+rest of its interval, so an installation restarted more often than daily still
+prunes.
 
 Three telemetry histories are pruned hourly on fixed windows you do not set:
 performance metrics and endpoint reachability at **30 days**, disk SMART history
@@ -779,6 +814,22 @@ rm ./restored-ca.crt
 
 Then confirm an enrolled agent checks in without a reinstall.
 
+## Reset admin password
+
+The sign-in page's "Forgot your password?" links here. There is no emailed reset: an installation may have no SMTP, and the product does not assume one.
+
+- **Any user:** an administrator resets it in **Settings › Users**. The user signs in with the issued password and must choose a new one.
+- **The only administrator, or nobody can sign in:** reset it from the Docker host. `/app/data/bootstrap-admin-password` is one-time: once changed, the next restart overwrites it with a note.
+
+  ```bash
+  docker compose exec backend ./posturermm-backend reset-admin-password admin@localhost
+  ```
+
+  The new password prints to your terminal, never the container log; the next login must change it. Live sessions end; API keys survive. It is **deliberately unauthenticated** — anyone who can `docker compose exec` here can already read the JWT secret and write the `users` table — and needs the backend running.
+
+  **Authenticator and backup codes lost too?** Add `--clear-2fa` to delete the account's TOTP enrolment and backup codes (audited as `totp_admin_reset`); without it, 2FA is untouched.
+- **Single sign-on or a directory:** reset your password at the provider. PostureRMM holds no password for those accounts.
+
 ## Troubleshooting
 
 - **Backend won't start:** `docker compose logs backend`. Migrations log themselves on startup.
@@ -789,15 +840,7 @@ Then confirm an enrolled agent checks in without a reinstall.
 - **Upgrades of one Windows endpoint fail with `predates signed release statements`:** re-run the [install one-liner](#agent-rollout) on it; it upgrades in place.
 - **Bastion returning 401 to the backend:** the bearer secret disagrees. Both sides must hold the same 32+ character `POSTURERMM_BASTION__SECRET` (or, unset on the Bastion, the file at `[bastion] secret_path`).
 - **Bastion returning 502 on feed pulls:** it could not reach the feed origin. Check egress from the DMZ host to `[feed] api_url` (default `https://feed.posturermm.com`) and `docker compose logs bastion`.
-- **Lost the admin password:** `/app/data/bootstrap-admin-password` is one-time: once changed, the next restart overwrites it with a note. Reset from the Docker host:
-
-  ```bash
-  docker compose exec backend ./posturermm-backend reset-admin-password admin@localhost
-  ```
-
-  The new password prints to your terminal, never the container log; the next login must change it. Live sessions end; API keys survive. It is **deliberately unauthenticated** — anyone who can `docker compose exec` here can already read the JWT secret and write the `users` table — and needs the backend running.
-
-  **Authenticator and backup codes lost too?** Add `--clear-2fa` to delete the account's TOTP enrolment and backup codes (audited as `totp_admin_reset`); without it, 2FA is untouched.
+- **Lost the admin password:** see [Reset admin password](#reset-admin-password).
 
 ---
 

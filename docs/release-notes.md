@@ -2,7 +2,54 @@
 
 What changed in every release, newest first. The hub keeps only the newest release's files, so upgrade to it directly; the notes of earlier releases stay on this page. To upgrade, follow the [upgrade steps](../README.md#upgrade).
 
-Jump to: [1.35.0](#v1.35.0) · [1.34.1](#v1.34.1) · [1.34.0](#v1.34.0) · [1.33.2](#v1.33.2) · [1.33.1](#v1.33.1) · [1.33.0](#v1.33.0) · [1.32.1](#v1.32.1) · [1.32.0](#v1.32.0) · [1.31.0](#v1.31.0) · [1.30.0](#v1.30.0) · [1.29.0](#v1.29.0) · [1.28.1](#v1.28.1) · [1.28.0](#v1.28.0)
+Jump to: [1.36.0](#v1.36.0) · [1.35.0](#v1.35.0) · [1.34.1](#v1.34.1) · [1.34.0](#v1.34.0) · [1.33.2](#v1.33.2) · [1.33.1](#v1.33.1) · [1.33.0](#v1.33.0) · [1.32.1](#v1.32.1) · [1.32.0](#v1.32.0) · [1.31.0](#v1.31.0) · [1.30.0](#v1.30.0) · [1.29.0](#v1.29.0) · [1.28.1](#v1.28.1) · [1.28.0](#v1.28.0)
+
+<a id="v1.36.0"></a>
+
+## Version 1.36.0
+
+Automation gets its own home, STIG checklists export straight to STIG Viewer, and you can act on every device a filter matches, not just one page of them.
+
+### Upgrading
+
+Back up first, because database migrations cannot be undone. Then, in the folder holding your `docker-compose.yml`:
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+There are no manual steps. Agents upgrade through your upgrade policy. The two agent fixes below take effect once a device runs this version.
+
+### New
+
+- **Automation hub.** Recurring deployments, scheduled scans, maintenance windows, restart rules and patch baselines live together under Automation in the sidebar, with ready-made recipes such as "Patch everything nightly". A new automation reads back as a plain-English summary before you save it, and a recurring automation lets you choose whether it runs on your clock or on each device's own.
+- **Select all matching, then act.** On Endpoints, Software, Patching, the Risk register and Network discovery, ticking the page offers "Select all N matching". A bulk action or a deployment then covers every device or update the filter matches. If the list changes before you confirm, nothing is sent and you are shown the new count.
+- **STIG checklist export.** Export a device's DISA STIG results as a `.cklb` file that STIG Viewer 3 opens, from a benchmark's Devices view or the device's Benchmarks card.
+- **Record manual STIG reviews.** For rules no scanner can check, record who reviewed them on which device, the result and a note, one device or many at once. Reviews expire after 12 months, ask for a re-review when the STIG version changes, and never change a score.
+- **Reports read as documents.** The Executive summary is a one-page brief with its detail in an appendix. It shows one compliance figure and your known-exploited vulnerabilities. New ISO 27001 Annex A and Essential Eight coverage reports are added.
+- **See where the points went.** Each device's Prevention, Patching and Performance tabs show which findings cost points and how many.
+- **Your own fields on endpoints.** Add fields such as owner or site, as a choice list or free text. Use them as list columns and filters, set them in bulk, stamp them from an install key, and find them in exports.
+- **Alerts and updates you can manage by hand.** Acknowledge, snooze or resolve a triggered alert, hide a Windows update across your organization, and accept a risk with who and when recorded.
+
+### Fixed
+
+- **A Windows 10 servicing stack update showed as missing on up-to-date machines.** It no longer does, once the device runs this agent version.
+- **A newly approved device showed hardware, disk and service rules as "Not measured" for up to an hour.** It reports them at its next check-in. When a check genuinely cannot read the device, the reason is shown.
+- **Returning to a browser tab sometimes asked you to sign in again.** You stay signed in.
+- **The endpoint, software and patching lists were slow to open.** They load two to three times faster.
+- **Kernel updates on Linux listed thousands of CVEs with no context.** Large CVE counts are grouped, say what they count, and name the advisories that fix them.
+- **Periodic jobs restarted their clock every time the server restarted.** They resume from their last run.
+
+### Security
+
+This release includes security hardening. All installs before 1.36.0 should upgrade.
+
+### Worth knowing
+
+- **Policy pages moved.** The Policies pages are now Automation. Windows feature policies moved to Prevention › Windows features, benchmark assignments to Prevention › Assignments, app control to Software › Blocked apps, and agent upgrade policies to Settings › Agent releases. Old addresses redirect to the new ones.
+- **Reboot moved into the More menu** of the bulk bar on Endpoints, next to Decommission. It still asks for confirmation.
+- **The Executive summary CSV changed.** It has one compliance headline, the Prevention score, plus unique open CVEs and known-exploited figures. The weekly "Average compliance" rows are gone. The JSON export keeps both fields.
+- **Install keys now start with `pik_`.** Existing keys keep working.
 
 <a id="v1.35.0"></a>
 

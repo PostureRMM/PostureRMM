@@ -132,6 +132,11 @@ curl -fsSL http://<host>/install-agent.sh | sudo sh
 or, on a host with no `curl`, `wget -qO- http://<host>/install-agent.sh | sudo sh`. It shows them
 only once the Linux agent packages are on the server; until then it says why.
 
+These commands start with a plain-HTTP download while the server uses its own certificate;
+the page's **Is this safe?** line says so and **Download and verify** checks the script's
+SHA-256 against the value printed on the page before it runs. See
+[PRODUCTION.md](PRODUCTION.md#tls-and-agent-trust).
+
 These commands carry no install key, so the endpoint arrives in the approval queue rather than
 straight into the fleet. Admit it from the same screen — or from **Pending approval** on
 **Settings → Enrollment** — and its first compliance scan finishes a few
@@ -177,7 +182,7 @@ docker compose up -d
 
 The new `docker-compose.yml` carries its release's version, so there is nothing to edit.
 Agents upgrade themselves once the server has the new agent, wherever an upgrade policy
-(Policies → Upgrade) covers them. What changed and any manual step, for every release you are
+(Settings → Agent releases → Upgrade policies) covers them. What changed and any manual step, for every release you are
 skipping: the [release notes](https://github.com/PostureRMM/PostureRMM/blob/main/docs/release-notes.md). Pinning a
 version: [configuration.md](configuration.md).
 
